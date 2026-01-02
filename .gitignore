@@ -1,3 +1,6 @@
-build/bin
-node_modules
 frontend/dist
+frontend/wailsjs
+build/bin
+**/node_modules
+*.exe
+*.dll
