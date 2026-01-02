@@ -5,7 +5,6 @@ go 1.23.0
 toolchain go1.24.11
 
 require (
-	github.com/divan/num2words v1.0.3
 	github.com/johnfercher/maroto/v2 v2.3.3
 	github.com/wailsapp/wails/v2 v2.11.0
 	gorm.io/driver/sqlite v1.6.0

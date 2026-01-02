@@ -7,8 +7,6 @@ import (
 	"time"
 
 	"factureapp/backend/database"
-
-	"github.com/divan/num2words"
 )
 
 // Service handles invoice business logic
@@ -151,7 +149,7 @@ func (s *Service) ConvertToWords(amount float64) string {
 	decimalPart := int(math.Round((amount - float64(wholePart)) * 100))
 
 	// Convert to French words
-	wholeWords := num2words.Convert(wholePart)
+	wholeWords := IntToFrench(wholePart)
 
 	// Capitalize first letter
 	if len(wholeWords) > 0 {
@@ -161,7 +159,7 @@ func (s *Service) ConvertToWords(amount float64) string {
 	result := fmt.Sprintf("Arrêté la présente facture à la somme de : %s dirhams", wholeWords)
 
 	if decimalPart > 0 {
-		decimalWords := num2words.Convert(decimalPart)
+		decimalWords := IntToFrench(decimalPart)
 		result += fmt.Sprintf(" et %s centimes", decimalWords)
 	}
 
