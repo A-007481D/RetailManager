@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"log"
+	"fmt"
 
 	"factureapp/backend/database"
 	"factureapp/backend/invoice"
@@ -30,15 +30,15 @@ func (a *App) startup(ctx context.Context) {
 
 	// Initialize database
 	if err := database.InitDatabase(); err != nil {
-		log.Fatalf("Failed to initialize database: %v", err)
+		panic(fmt.Sprintf("Failed to initialize database: %v", err))
 	}
 
 	// Run migrations
 	if err := a.invoiceService.Migrate(); err != nil {
-		log.Fatalf("Failed to run migrations: %v", err)
+		panic(fmt.Sprintf("Failed to run migrations: %v", err))
 	}
 
-	log.Println("FactureApp started successfully")
+	fmt.Println("FactureApp started successfully")
 }
 
 // CreateInvoice creates a new invoice and returns the response

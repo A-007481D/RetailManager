@@ -1,7 +1,7 @@
 package database
 
 import (
-	"log"
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -27,7 +27,7 @@ func InitDatabase() error {
 	}
 
 	dbPath := filepath.Join(appDir, "invoices.db")
-	log.Printf("Database path: %s", dbPath)
+	fmt.Println("Database path:", dbPath)
 
 	// Open SQLite connection
 	db, err := gorm.Open(sqlite.Open(dbPath), &gorm.Config{
