@@ -64,3 +64,33 @@ func (s *Service) UpdateProduct(product Product) error {
 	}
 	return nil
 }
+
+// DeleteProduct soft deletes a product
+func (s *Service) DeleteProduct(id uint) error {
+	db := database.GetDB()
+	// GORM performs a soft delete automatically because Product embeds gorm.Model
+	if err := db.Delete(&Product{}, id).Error; err != nil {
+		return fmt.Errorf("failed to delete product: %w", err)
+	}
+	return nil
+}
+
+type InventoryStats struct {
+	TotalProducts int64
+	LowStockCount int64
+}
+
+func (s *Service) GetStats() (*InventoryStats, error) {
+	db := database.GetDB()
+	var stats InventoryStats
+
+	if err := db.Model(&Product{}).Count(&stats.TotalProducts).Error; err != nil {
+		return nil, err
+	}
+
+	if err := db.Model(&Product{}).Where("current_stock <= min_stock_level").Count(&stats.LowStockCount).Error; err != nil {
+		return nil, err
+	}
+
+	return &stats, nil
+}

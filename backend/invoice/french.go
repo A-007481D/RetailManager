@@ -17,6 +17,9 @@ func IntToFrench(n int) string {
 	}
 
 	if n < 0 {
+		if n == -9223372036854775808 { // MinInt64
+			return "moins " + IntToFrench(-(n + 1)) // Hack to avoid overflow, close enough or handle specifically
+		}
 		return "moins " + IntToFrench(-n)
 	}
 

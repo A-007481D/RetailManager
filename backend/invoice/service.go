@@ -247,3 +247,40 @@ func (s *Service) toResponse(inv *Invoice) *InvoiceResponse {
 
 	return resp
 }
+
+type InvoiceStats struct {
+	TotalRevenue   float64
+	TotalInvoices  int64
+	RecentInvoices []InvoiceResponse
+}
+
+func (s *Service) GetStats() (*InvoiceStats, error) {
+	db := database.GetDB()
+	var stats InvoiceStats
+
+	// Total Invoices
+	if err := db.Model(&Invoice{}).Count(&stats.TotalInvoices).Error; err != nil {
+		return nil, err
+	}
+
+	// Total Revenue
+	var result struct {
+		Total float64
+	}
+	if err := db.Model(&Invoice{}).Select("sum(total_ttc) as total").Scan(&result).Error; err != nil {
+		return nil, err
+	}
+	stats.TotalRevenue = result.Total
+
+	// Recent Invoices
+	var recent []Invoice
+	if err := db.Preload("Items").Order("created_at desc").Limit(5).Find(&recent).Error; err != nil {
+		return nil, err
+	}
+
+	for _, inv := range recent {
+		stats.RecentInvoices = append(stats.RecentInvoices, *s.toResponse(&inv))
+	}
+
+	return &stats, nil
+}
