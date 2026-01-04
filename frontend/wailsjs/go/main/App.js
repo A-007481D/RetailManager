@@ -10,12 +10,20 @@ export function CreateInvoice(arg1) {
   return window['go']['main']['App']['CreateInvoice'](arg1);
 }
 
+export function CreateProduct(arg1) {
+  return window['go']['main']['App']['CreateProduct'](arg1);
+}
+
 export function GeneratePDF(arg1) {
   return window['go']['main']['App']['GeneratePDF'](arg1);
 }
 
 export function GetAllInvoices() {
   return window['go']['main']['App']['GetAllInvoices']();
+}
+
+export function GetAllProducts() {
+  return window['go']['main']['App']['GetAllProducts']();
 }
 
 export function GetInvoiceByID(arg1) {

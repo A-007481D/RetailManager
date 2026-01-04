@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"factureapp/backend/database"
+	"factureapp/backend/inventory"
 	"factureapp/backend/invoice"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
@@ -12,14 +13,19 @@ import (
 
 // App struct
 type App struct {
-	ctx            context.Context
-	invoiceService *invoice.Service
+	ctx              context.Context
+	invoiceService   *invoice.Service
+	inventoryService *inventory.Service
 }
 
 // NewApp creates a new App application struct
 func NewApp() *App {
+	inventoryService := inventory.NewService()
+	invoiceService := invoice.NewService(inventoryService)
+
 	return &App{
-		invoiceService: invoice.NewService(),
+		invoiceService:   invoiceService,
+		inventoryService: inventoryService,
 	}
 }
 
@@ -34,8 +40,11 @@ func (a *App) startup(ctx context.Context) {
 	}
 
 	// Run migrations
+	if err := a.inventoryService.Migrate(); err != nil {
+		panic(fmt.Sprintf("Failed to run inventory migrations: %v", err))
+	}
 	if err := a.invoiceService.Migrate(); err != nil {
-		panic(fmt.Sprintf("Failed to run migrations: %v", err))
+		panic(fmt.Sprintf("Failed to run invoice migrations: %v", err))
 	}
 
 	fmt.Println("FactureApp started successfully")
@@ -78,4 +87,14 @@ func (a *App) CalculateTotals(totalTTC float64) map[string]interface{} {
 // GetTotalInWords converts amount to French words
 func (a *App) GetTotalInWords(amount float64) string {
 	return a.invoiceService.ConvertToWords(amount)
+}
+
+// CreateProduct creates a new product
+func (a *App) CreateProduct(product inventory.Product) (*inventory.Product, error) {
+	return a.inventoryService.CreateProduct(product)
+}
+
+// GetAllProducts returns all products
+func (a *App) GetAllProducts() ([]inventory.Product, error) {
+	return a.inventoryService.GetAllProducts()
 }

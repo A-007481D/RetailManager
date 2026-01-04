@@ -7,14 +7,19 @@ import (
 	"time"
 
 	"factureapp/backend/database"
+	"factureapp/backend/inventory"
 )
 
 // Service handles invoice business logic
-type Service struct{}
+type Service struct {
+	inventoryService *inventory.Service
+}
 
 // NewService creates a new invoice service
-func NewService() *Service {
-	return &Service{}
+func NewService(inventoryService *inventory.Service) *Service {
+	return &Service{
+		inventoryService: inventoryService,
+	}
 }
 
 // Migrate runs database migrations for invoice models
@@ -26,6 +31,17 @@ func (s *Service) Migrate() error {
 // CreateInvoice creates a new invoice with auto-numbering and calculations
 func (s *Service) CreateInvoice(req InvoiceCreateRequest) (*InvoiceResponse, error) {
 	db := database.GetDB()
+
+	// Start transaction
+	tx := db.Begin()
+	if tx.Error != nil {
+		return nil, tx.Error
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
 
 	// Parse date
 	date, err := time.Parse("02-01-2006", req.Date)
@@ -47,12 +63,20 @@ func (s *Service) CreateInvoice(req InvoiceCreateRequest) (*InvoiceResponse, err
 	for i, item := range req.Items {
 		itemTotal := item.Quantity * item.PrixUnitTTC
 		items[i] = InvoiceItem{
+			ProductID:   item.ProductID,
 			Description: item.Description,
 			Quantity:    item.Quantity,
 			PrixUnitTTC: item.PrixUnitTTC,
 			TotalTTC:    itemTotal,
 		}
 		totalTTC += itemTotal
+
+		// Decrement stock
+		if err := s.inventoryService.DecreaseStock(tx, item.ProductID, int(item.Quantity)); err != nil {
+			tx.Rollback()
+			return nil, fmt.Errorf("stock error for item %s: %w", item.Description, err)
+		}
+
 	}
 
 	// Reverse tax calculation: HT = TTC / 1.20
@@ -69,7 +93,7 @@ func (s *Service) CreateInvoice(req InvoiceCreateRequest) (*InvoiceResponse, err
 
 	// Auto-numbering: get last sequence number for current year
 	var lastInvoice Invoice
-	db.Where("year = ?", currentYear).Order("sequence_number DESC").First(&lastInvoice)
+	tx.Where("year = ?", currentYear).Order("sequence_number DESC").First(&lastInvoice)
 
 	nextSequence := 1
 	if lastInvoice.ID != 0 {
@@ -81,19 +105,20 @@ func (s *Service) CreateInvoice(req InvoiceCreateRequest) (*InvoiceResponse, err
 
 	// Create invoice
 	invoice := Invoice{
-		FormattedID:    formattedID,
-		SequenceNumber: nextSequence,
-		Year:           currentYear,
-		Date:           date,
-		ClientName:     req.ClientName,
-		ClientCity:     req.ClientCity,
-		ClientICE:      req.ClientICE,
-		TotalHT:        totalHT,
-		TotalTVA:       totalTVA,
-		TotalTTC:       totalTTC,
-		TotalInWords:   totalInWords,
-		PaymentMethod:  req.PaymentMethod,
-		Items:          items,
+		FormattedID:       formattedID,
+		CustomFormattedID: req.CustomFormattedID,
+		SequenceNumber:    nextSequence,
+		Year:              currentYear,
+		Date:              date,
+		ClientName:        req.ClientName,
+		ClientCity:        req.ClientCity,
+		ClientICE:         req.ClientICE,
+		TotalHT:           totalHT,
+		TotalTVA:          totalTVA,
+		TotalTTC:          totalTTC,
+		TotalInWords:      totalInWords,
+		PaymentMethod:     req.PaymentMethod,
+		Items:             items,
 	}
 
 	// Set payment details based on method
@@ -110,8 +135,15 @@ func (s *Service) CreateInvoice(req InvoiceCreateRequest) (*InvoiceResponse, err
 	}
 
 	// Save to database
-	if err := db.Create(&invoice).Error; err != nil {
+	// Save to database
+	if err := tx.Create(&invoice).Error; err != nil {
+		tx.Rollback()
 		return nil, fmt.Errorf("failed to create invoice: %w", err)
+	}
+
+	// Commit transaction
+	if err := tx.Commit().Error; err != nil {
+		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
 	return s.toResponse(&invoice), nil
@@ -182,18 +214,19 @@ func (s *Service) CalculateTotals(totalTTC float64) map[string]interface{} {
 // toResponse converts Invoice model to response DTO
 func (s *Service) toResponse(inv *Invoice) *InvoiceResponse {
 	resp := &InvoiceResponse{
-		ID:            inv.ID,
-		FormattedID:   inv.FormattedID,
-		Date:          inv.Date.Format("02-01-2006"),
-		ClientName:    inv.ClientName,
-		ClientCity:    inv.ClientCity,
-		ClientICE:     inv.ClientICE,
-		TotalHT:       inv.TotalHT,
-		TotalTVA:      inv.TotalTVA,
-		TotalTTC:      inv.TotalTTC,
-		TotalInWords:  inv.TotalInWords,
-		PaymentMethod: inv.PaymentMethod,
-		Items:         inv.Items,
+		ID:                inv.ID,
+		FormattedID:       inv.FormattedID,
+		CustomFormattedID: inv.CustomFormattedID,
+		Date:              inv.Date.Format("02-01-2006"),
+		ClientName:        inv.ClientName,
+		ClientCity:        inv.ClientCity,
+		ClientICE:         inv.ClientICE,
+		TotalHT:           inv.TotalHT,
+		TotalTVA:          inv.TotalTVA,
+		TotalTTC:          inv.TotalTTC,
+		TotalInWords:      inv.TotalInWords,
+		PaymentMethod:     inv.PaymentMethod,
+		Items:             inv.Items,
 	}
 
 	if inv.PaymentMethod == "CHEQUE" && inv.ChequeNumber != "" {

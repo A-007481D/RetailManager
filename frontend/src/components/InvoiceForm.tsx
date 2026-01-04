@@ -1,9 +1,11 @@
 import React from 'react';
+import { useInventory } from '../hooks/useInventory';
 import { useInvoice } from '../hooks/useInvoice';
 import { ItemRow } from './ItemRow';
 import { PaymentSection } from './PaymentSection';
 
 export const InvoiceForm: React.FC = () => {
+    const { products } = useInventory();
     const {
         formData,
         totalsPreview,
@@ -17,7 +19,6 @@ export const InvoiceForm: React.FC = () => {
         updateChequeInfo,
         updateEffetInfo,
         submitInvoice,
-        descriptionOptions,
     } = useInvoice();
 
     return (
@@ -66,6 +67,16 @@ export const InvoiceForm: React.FC = () => {
                                     value={formData.date}
                                     onChange={(e) => updateField('date', e.target.value)}
                                     placeholder="JJ-MM-AAAA"
+                                />
+                            </div>
+                            <div>
+                                <label className="label">N° Facture (Optionnel)</label>
+                                <input
+                                    type="text"
+                                    className="input"
+                                    value={formData.customFormattedId || ''}
+                                    onChange={(e) => updateField('customFormattedId', e.target.value)}
+                                    placeholder="Ex: 0005 - 2026"
                                 />
                             </div>
                             <div>
@@ -136,7 +147,7 @@ export const InvoiceForm: React.FC = () => {
                                             key={index}
                                             item={item}
                                             index={index}
-                                            descriptionOptions={descriptionOptions}
+                                            products={products}
                                             onUpdate={updateItem}
                                             onRemove={removeItem}
                                             canRemove={formData.items.length > 1}

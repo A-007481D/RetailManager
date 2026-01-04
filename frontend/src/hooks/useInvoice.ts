@@ -4,6 +4,7 @@ import { invoice } from '../../wailsjs/go/models';
 
 // Types
 export interface InvoiceItem {
+    productId: number;
     description: string;
     quantity: number;
     prixUnitTTC: number;
@@ -24,6 +25,7 @@ export interface EffetInfo {
 
 export interface InvoiceFormData {
     date: string;
+    customFormattedId?: string;
     clientName: string;
     clientCity: string;
     clientIce: string;
@@ -52,7 +54,8 @@ const DESCRIPTION_OPTIONS = [
 ];
 
 const emptyItem = (): InvoiceItem => ({
-    description: DESCRIPTION_OPTIONS[0],
+    productId: 0,
+    description: '',
     quantity: 1,
     prixUnitTTC: 0,
     totalTTC: 0,
@@ -68,6 +71,7 @@ const formatDate = (date: Date): string => {
 export function useInvoice() {
     const [formData, setFormData] = useState<InvoiceFormData>({
         date: formatDate(new Date()),
+        customFormattedId: '',
         clientName: '',
         clientCity: '',
         clientIce: '',
@@ -204,6 +208,7 @@ export function useInvoice() {
             // Create request using Wails generated model classes
             const request = invoice.InvoiceCreateRequest.createFrom({
                 date: formData.date,
+                customFormattedId: formData.customFormattedId || '',
                 clientName: formData.clientName,
                 clientCity: formData.clientCity,
                 clientIce: formData.clientIce,
@@ -215,6 +220,7 @@ export function useInvoice() {
                     ? formData.effetInfo
                     : undefined,
                 items: formData.items.map(item => ({
+                    productId: item.productId,
                     description: item.description,
                     quantity: item.quantity,
                     prixUnitTTC: item.prixUnitTTC,
@@ -234,6 +240,7 @@ export function useInvoice() {
             // Reset form
             setFormData({
                 date: formatDate(new Date()),
+                customFormattedId: '',
                 clientName: '',
                 clientCity: '',
                 clientIce: '',

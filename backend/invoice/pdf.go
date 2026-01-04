@@ -18,7 +18,7 @@ import (
 
 const (
 	// CompanyICE is the placeholder for company ICE number
-	CompanyICE = "000000000000000" // Replace with actual company ICE
+	CompanyICE = "001844544000022" // Replace with actual company ICE
 
 	// TopMarginMM is the blank margin at top for pre-printed stationery
 	TopMarginMM = 40.0
@@ -26,10 +26,11 @@ const (
 
 // Color definitions
 var (
-	primaryColor  = &props.Color{Red: 41, Green: 128, Blue: 185}  // Blue
-	headerBgColor = &props.Color{Red: 236, Green: 240, Blue: 241} // Light gray
-	lineColor     = &props.Color{Red: 149, Green: 165, Blue: 166} // Gray
-	totalBgColor  = &props.Color{Red: 46, Green: 204, Blue: 113}  // Green
+	primaryColor  = &props.Color{Red: 0, Green: 0, Blue: 0}       // Black
+	headerBgColor = &props.Color{Red: 230, Green: 230, Blue: 230} // Light gray
+	lineColor     = &props.Color{Red: 128, Green: 128, Blue: 128} // Medium gray
+	totalBgColor  = &props.Color{Red: 200, Green: 200, Blue: 200} // Gray
+	darkGray      = &props.Color{Red: 80, Green: 80, Blue: 80}    // Dark gray
 )
 
 // GeneratePDF creates a PDF invoice and returns the file path
@@ -128,10 +129,16 @@ func (s *Service) addSeparatorLine(m core.Maroto) {
 }
 
 func (s *Service) addHeader(m core.Maroto, invoice *InvoiceResponse) {
+	// Determine which ID to show
+	displayID := invoice.FormattedID
+	if invoice.CustomFormattedID != "" {
+		displayID = invoice.CustomFormattedID
+	}
+
 	// Invoice number with blue color
 	m.AddRow(10,
 		col.New(6).Add(
-			text.New("FACTURE N°: "+invoice.FormattedID, props.Text{
+			text.New("FACTURE N°: "+displayID, props.Text{
 				Size:  14,
 				Style: fontstyle.Bold,
 				Color: primaryColor,
@@ -166,7 +173,7 @@ func (s *Service) addHeader(m core.Maroto, invoice *InvoiceResponse) {
 			text.New("ICE: "+invoice.ClientICE, props.Text{
 				Size:  10,
 				Align: align.Right,
-				Color: &props.Color{Red: 127, Green: 140, Blue: 141},
+				Color: darkGray,
 			}),
 		),
 	)
@@ -178,7 +185,7 @@ func (s *Service) addItemsTable(m core.Maroto, invoice *InvoiceResponse) {
 		Size:  10,
 		Style: fontstyle.Bold,
 		Align: align.Center,
-		Color: &props.Color{Red: 44, Green: 62, Blue: 80},
+		Color: primaryColor,
 	}
 
 	// Header row with background color
@@ -277,7 +284,7 @@ func (s *Service) addTotals(m core.Maroto, invoice *InvoiceResponse) {
 		col.New(2).Add(text.New(fmt.Sprintf("%.2f DH", invoice.TotalTVA), props.Text{
 			Size:  10,
 			Align: align.Right,
-			Color: &props.Color{Red: 231, Green: 76, Blue: 60}, // Red for TVA
+			Color: darkGray,
 		})),
 	)
 
@@ -316,48 +323,90 @@ func (s *Service) addLegalText(m core.Maroto, invoice *InvoiceResponse) {
 			text.New(invoice.TotalInWords, props.Text{
 				Size:  9,
 				Style: fontstyle.BoldItalic,
-				Color: &props.Color{Red: 44, Green: 62, Blue: 80},
+				Color: darkGray,
 			}),
 		),
 	)
 }
 
 func (s *Service) addPaymentDetails(m core.Maroto, invoice *InvoiceResponse) {
-	var paymentText string
+	rowStyle := &props.Cell{
+		BackgroundColor: &props.Color{Red: 245, Green: 245, Blue: 245},
+	}
+	labelProps := props.Text{
+		Size:  9,
+		Style: fontstyle.Bold,
+		Color: darkGray,
+	}
+	valueProps := props.Text{
+		Size:  9,
+		Color: primaryColor,
+	}
 
 	switch invoice.PaymentMethod {
 	case "ESPECE":
-		paymentText = "💵 Mode de paiement: Espèce"
+		m.AddRow(8,
+			col.New(3).Add(text.New("Mode de paiement:", labelProps)),
+			col.New(9).Add(text.New("Espèce", valueProps)),
+		).WithStyle(rowStyle)
+
 	case "CHEQUE":
 		if invoice.ChequeInfo != nil {
-			paymentText = fmt.Sprintf(
-				"📝 Paiement par Chèque N° %s | Banque: %s | Ville: %s | Réf: %s",
-				invoice.ChequeInfo.Number,
-				invoice.ChequeInfo.Bank,
-				invoice.ChequeInfo.City,
-				invoice.ChequeInfo.Reference,
-			)
+			// Row 1: Payment type
+			m.AddRow(7,
+				col.New(3).Add(text.New("Mode de paiement:", labelProps)),
+				col.New(9).Add(text.New("Chèque", valueProps)),
+			).WithStyle(rowStyle)
+
+			// Row 2: Cheque number
+			m.AddRow(7,
+				col.New(3).Add(text.New("N° Chèque:", labelProps)),
+				col.New(9).Add(text.New(invoice.ChequeInfo.Number, valueProps)),
+			).WithStyle(rowStyle)
+
+			// Row 3: Bank
+			m.AddRow(7,
+				col.New(3).Add(text.New("Banque:", labelProps)),
+				col.New(9).Add(text.New(invoice.ChequeInfo.Bank, valueProps)),
+			).WithStyle(rowStyle)
+
+			// Row 4: City
+			if invoice.ChequeInfo.City != "" {
+				m.AddRow(7,
+					col.New(3).Add(text.New("Ville:", labelProps)),
+					col.New(9).Add(text.New(invoice.ChequeInfo.City, valueProps)),
+				).WithStyle(rowStyle)
+			}
+
+			// Row 5: Reference
+			if invoice.ChequeInfo.Reference != "" {
+				m.AddRow(7,
+					col.New(3).Add(text.New("Référence:", labelProps)),
+					col.New(9).Add(text.New(invoice.ChequeInfo.Reference, valueProps)),
+				).WithStyle(rowStyle)
+			}
 		}
+
 	case "EFFET":
 		if invoice.EffetInfo != nil {
-			paymentText = fmt.Sprintf(
-				"📄 Paiement par Effet | Ville: %s | Échéance: %s",
-				invoice.EffetInfo.City,
-				invoice.EffetInfo.DateEcheance,
-			)
-		}
-	}
+			// Row 1: Payment type
+			m.AddRow(7,
+				col.New(3).Add(text.New("Mode de paiement:", labelProps)),
+				col.New(9).Add(text.New("Effet", valueProps)),
+			).WithStyle(rowStyle)
 
-	if paymentText != "" {
-		m.AddRow(8,
-			col.New(12).Add(
-				text.New(paymentText, props.Text{
-					Size: 9,
-				}),
-			),
-		).WithStyle(&props.Cell{
-			BackgroundColor: &props.Color{Red: 245, Green: 247, Blue: 250},
-		})
+			// Row 2: City
+			m.AddRow(7,
+				col.New(3).Add(text.New("Ville:", labelProps)),
+				col.New(9).Add(text.New(invoice.EffetInfo.City, valueProps)),
+			).WithStyle(rowStyle)
+
+			// Row 3: Due date
+			m.AddRow(7,
+				col.New(3).Add(text.New("Échéance:", labelProps)),
+				col.New(9).Add(text.New(invoice.EffetInfo.DateEcheance, valueProps)),
+			).WithStyle(rowStyle)
+		}
 	}
 }
 
@@ -365,12 +414,13 @@ func (s *Service) addFooter(m core.Maroto) {
 	// Separator line
 	s.addSeparatorLine(m)
 
-	m.AddRow(8,
+	m.AddRow(10,
 		col.New(12).Add(
 			text.New("ICE Société: "+CompanyICE, props.Text{
-				Size:  9,
+				Size:  11,
+				Style: fontstyle.Bold,
 				Align: align.Center,
-				Color: lineColor,
+				Color: primaryColor,
 			}),
 		),
 	)

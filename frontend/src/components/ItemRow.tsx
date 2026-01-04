@@ -1,10 +1,11 @@
 import React from 'react';
 import { InvoiceItem } from '../hooks/useInvoice';
+import { Product } from '../types/inventory';
 
 interface ItemRowProps {
     item: InvoiceItem;
     index: number;
-    descriptionOptions: string[];
+    products: Product[];
     onUpdate: (index: number, field: keyof InvoiceItem, value: string | number) => void;
     onRemove: (index: number) => void;
     canRemove: boolean;
@@ -13,22 +14,39 @@ interface ItemRowProps {
 export const ItemRow: React.FC<ItemRowProps> = ({
     item,
     index,
-    descriptionOptions,
+    products,
     onUpdate,
     onRemove,
     canRemove,
 }) => {
+    const handleProductChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const productId = parseInt(e.target.value);
+        const product = products.find(p => p.ID === productId);
+
+        if (product) {
+            onUpdate(index, 'productId', product.ID);
+            onUpdate(index, 'description', product.Name);
+            onUpdate(index, 'prixUnitTTC', product.SellingPriceTTC);
+        } else {
+            // Handle "Other" or custom entry if needed, or just reset
+            onUpdate(index, 'productId', 0);
+            onUpdate(index, 'description', '');
+            onUpdate(index, 'prixUnitTTC', 0);
+        }
+    };
+
     return (
         <tr className="hover:bg-gray-50 transition-colors">
             <td className="px-4 py-3">
                 <select
                     className="select text-sm"
-                    value={item.description}
-                    onChange={(e) => onUpdate(index, 'description', e.target.value)}
+                    value={item.productId || ''}
+                    onChange={handleProductChange}
                 >
-                    {descriptionOptions.map((opt) => (
-                        <option key={opt} value={opt}>
-                            {opt}
+                    <option value="">Sélectionner un produit</option>
+                    {products.map((p) => (
+                        <option key={p.ID} value={p.ID}>
+                            {p.Name} (Stock: {p.CurrentStock})
                         </option>
                     ))}
                 </select>
