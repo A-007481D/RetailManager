@@ -2,43 +2,66 @@ import { useState } from 'react';
 import './style.css';
 import { InvoiceForm } from './components/InvoiceForm';
 import { ProductList } from './components/ProductList';
+import { Dashboard } from './components/Dashboard';
+import { ClientList } from './components/ClientList';
 
 function App() {
-    const [activeTab, setActiveTab] = useState<'invoices' | 'inventory'>('invoices');
+    const [activeTab, setActiveTab] = useState<'dashboard' | 'invoices' | 'inventory' | 'clients'>('dashboard');
 
     return (
-        <div className="min-h-screen bg-gray-100">
+        <div className="min-h-screen bg-gray-100 flex flex-col">
             {/* Navigation Bar */}
-            <nav className="bg-white shadow-sm border-b px-6 py-3 flex items-center justify-between">
+            <nav className="bg-white shadow-sm border-b border-gray-200 px-6 py-3 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                    <span className="text-2xl">🏪</span>
-                    <span className="font-bold text-xl text-gray-800">RetailManager</span>
+                    <span className="text-2xl">🧾</span>
+                    <span className="font-bold text-xl text-gray-800 tracking-tight">RetailManager</span>
                 </div>
-                <div className="flex gap-4">
+                <div className="flex gap-2 bg-gray-100 p-1 rounded-lg">
                     <button
-                        onClick={() => setActiveTab('invoices')}
-                        className={`px-4 py-2 rounded-lg transition-colors ${activeTab === 'invoices'
-                            ? 'bg-primary-600 text-white'
-                            : 'text-gray-600 hover:bg-gray-100'
+                        onClick={() => setActiveTab('dashboard')}
+                        className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${activeTab === 'dashboard'
+                            ? 'bg-white text-primary-600 shadow-sm'
+                            : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'
                             }`}
                     >
-                        📄 Factures
+                        Tableau de Bord
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('invoices')}
+                        className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${activeTab === 'invoices'
+                            ? 'bg-white text-primary-600 shadow-sm'
+                            : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'
+                            }`}
+                    >
+                        Factures
                     </button>
                     <button
                         onClick={() => setActiveTab('inventory')}
-                        className={`px-4 py-2 rounded-lg transition-colors ${activeTab === 'inventory'
-                            ? 'bg-primary-600 text-white'
-                            : 'text-gray-600 hover:bg-gray-100'
+                        className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${activeTab === 'inventory'
+                            ? 'bg-white text-primary-600 shadow-sm'
+                            : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'
                             }`}
                     >
-                        📦 Stock
+                        Stock
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('clients')}
+                        className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${activeTab === 'clients'
+                            ? 'bg-white text-primary-600 shadow-sm'
+                            : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'
+                            }`}
+                    >
+                        Clients
                     </button>
                 </div>
             </nav>
 
-            {/* Content */}
-            <main>
-                {activeTab === 'invoices' ? <InvoiceForm /> : <ProductList />}
+            {/* Main Content */}
+            <main className="flex-1 overflow-auto">
+                {activeTab === 'dashboard' && <Dashboard />}
+                {activeTab === 'invoices' && <InvoiceForm />}
+                {activeTab === 'inventory' && <ProductList />}
+                {activeTab === 'clients' && <ClientList />}
             </main>
         </div>
     );

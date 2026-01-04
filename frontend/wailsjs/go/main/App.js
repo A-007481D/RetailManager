@@ -6,6 +6,10 @@ export function CalculateTotals(arg1) {
   return window['go']['main']['App']['CalculateTotals'](arg1);
 }
 
+export function CreateClient(arg1) {
+  return window['go']['main']['App']['CreateClient'](arg1);
+}
+
 export function CreateInvoice(arg1) {
   return window['go']['main']['App']['CreateInvoice'](arg1);
 }
@@ -14,8 +18,20 @@ export function CreateProduct(arg1) {
   return window['go']['main']['App']['CreateProduct'](arg1);
 }
 
+export function DeleteClient(arg1) {
+  return window['go']['main']['App']['DeleteClient'](arg1);
+}
+
+export function DeleteProduct(arg1) {
+  return window['go']['main']['App']['DeleteProduct'](arg1);
+}
+
 export function GeneratePDF(arg1) {
   return window['go']['main']['App']['GeneratePDF'](arg1);
+}
+
+export function GetAllClients() {
+  return window['go']['main']['App']['GetAllClients']();
 }
 
 export function GetAllInvoices() {
@@ -24,6 +40,10 @@ export function GetAllInvoices() {
 
 export function GetAllProducts() {
   return window['go']['main']['App']['GetAllProducts']();
+}
+
+export function GetDashboardStats() {
+  return window['go']['main']['App']['GetDashboardStats']();
 }
 
 export function GetInvoiceByID(arg1) {
@@ -36,6 +56,14 @@ export function GetTotalInWords(arg1) {
 
 export function OpenPDF(arg1) {
   return window['go']['main']['App']['OpenPDF'](arg1);
+}
+
+export function SearchClients(arg1) {
+  return window['go']['main']['App']['SearchClients'](arg1);
+}
+
+export function UpdateClient(arg1) {
+  return window['go']['main']['App']['UpdateClient'](arg1);
 }
 
 export function UpdateProduct(arg1) {

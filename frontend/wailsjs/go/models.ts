@@ -1,5 +1,75 @@
+export namespace client {
+	
+	export class Client {
+	    ID: number;
+	    // Go type: time
+	    CreatedAt: any;
+	    // Go type: time
+	    UpdatedAt: any;
+	    // Go type: gorm
+	    DeletedAt: any;
+	    name: string;
+	    ice: string;
+	    city: string;
+	    address: string;
+	    phone: string;
+	    email: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new Client(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.ID = source["ID"];
+	        this.CreatedAt = this.convertValues(source["CreatedAt"], null);
+	        this.UpdatedAt = this.convertValues(source["UpdatedAt"], null);
+	        this.DeletedAt = this.convertValues(source["DeletedAt"], null);
+	        this.name = source["name"];
+	        this.ice = source["ice"];
+	        this.city = source["city"];
+	        this.address = source["address"];
+	        this.phone = source["phone"];
+	        this.email = source["email"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+
+}
+
 export namespace inventory {
 	
+	export class InventoryStats {
+	    TotalProducts: number;
+	    LowStockCount: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new InventoryStats(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.TotalProducts = source["TotalProducts"];
+	        this.LowStockCount = source["LowStockCount"];
+	    }
+	}
 	export class Product {
 	    ID: number;
 	    // Go type: time
@@ -237,6 +307,77 @@ export namespace invoice {
 	        this.chequeInfo = this.convertValues(source["chequeInfo"], ChequeInfo);
 	        this.effetInfo = this.convertValues(source["effetInfo"], EffetInfo);
 	        this.items = this.convertValues(source["items"], InvoiceItem);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class InvoiceStats {
+	    TotalRevenue: number;
+	    TotalInvoices: number;
+	    RecentInvoices: InvoiceResponse[];
+	
+	    static createFrom(source: any = {}) {
+	        return new InvoiceStats(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.TotalRevenue = source["TotalRevenue"];
+	        this.TotalInvoices = source["TotalInvoices"];
+	        this.RecentInvoices = this.convertValues(source["RecentInvoices"], InvoiceResponse);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+
+}
+
+export namespace main {
+	
+	export class DashboardStats {
+	    InvoiceStats?: invoice.InvoiceStats;
+	    InventoryStats?: inventory.InventoryStats;
+	
+	    static createFrom(source: any = {}) {
+	        return new DashboardStats(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.InvoiceStats = this.convertValues(source["InvoiceStats"], invoice.InvoiceStats);
+	        this.InventoryStats = this.convertValues(source["InventoryStats"], inventory.InventoryStats);
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {

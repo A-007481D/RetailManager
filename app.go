@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"factureapp/backend/client"
 	"factureapp/backend/database"
 	"factureapp/backend/inventory"
 	"factureapp/backend/invoice"
@@ -16,16 +17,19 @@ type App struct {
 	ctx              context.Context
 	invoiceService   *invoice.Service
 	inventoryService *inventory.Service
+	clientService    *client.Service
 }
 
 // NewApp creates a new App application struct
 func NewApp() *App {
 	inventoryService := inventory.NewService()
 	invoiceService := invoice.NewService(inventoryService)
+	clientService := client.NewService()
 
 	return &App{
 		invoiceService:   invoiceService,
 		inventoryService: inventoryService,
+		clientService:    clientService,
 	}
 }
 
@@ -45,6 +49,9 @@ func (a *App) startup(ctx context.Context) {
 	}
 	if err := a.invoiceService.Migrate(); err != nil {
 		panic(fmt.Sprintf("Failed to run invoice migrations: %v", err))
+	}
+	if err := a.clientService.Migrate(); err != nil {
+		panic(fmt.Sprintf("Failed to run client migrations: %v", err))
 	}
 
 	fmt.Println("FactureApp started successfully")
@@ -102,4 +109,55 @@ func (a *App) GetAllProducts() ([]inventory.Product, error) {
 // UpdateProduct updates an existing product
 func (a *App) UpdateProduct(product inventory.Product) error {
 	return a.inventoryService.UpdateProduct(product)
+}
+
+func (a *App) DeleteProduct(id uint) error {
+	return a.inventoryService.DeleteProduct(id)
+}
+
+type DashboardStats struct {
+	InvoiceStats   *invoice.InvoiceStats
+	InventoryStats *inventory.InventoryStats
+}
+
+func (a *App) GetDashboardStats() (*DashboardStats, error) {
+	invStats, err := a.invoiceService.GetStats()
+	if err != nil {
+		return nil, err
+	}
+
+	stockStats, err := a.inventoryService.GetStats()
+	if err != nil {
+		return nil, err
+	}
+
+	return &DashboardStats{
+		InvoiceStats:   invStats,
+		InventoryStats: stockStats,
+	}, nil
+}
+
+// CreateClient creates a new client
+func (a *App) CreateClient(c client.Client) error {
+	return a.clientService.CreateClient(c)
+}
+
+// UpdateClient updates an existing client
+func (a *App) UpdateClient(c client.Client) error {
+	return a.clientService.UpdateClient(c)
+}
+
+// DeleteClient deletes a client
+func (a *App) DeleteClient(id uint) error {
+	return a.clientService.DeleteClient(id)
+}
+
+// GetAllClients returns all clients
+func (a *App) GetAllClients() ([]client.Client, error) {
+	return a.clientService.GetAllClients()
+}
+
+// SearchClients searches clients
+func (a *App) SearchClients(query string) ([]client.Client, error) {
+	return a.clientService.SearchClients(query)
 }

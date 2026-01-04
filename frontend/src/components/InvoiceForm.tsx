@@ -1,11 +1,25 @@
 import React from 'react';
 import { useInventory } from '../hooks/useInventory';
 import { useInvoice } from '../hooks/useInvoice';
+import { useClients } from '../hooks/useClients';
+import { ClientCombobox } from './ClientCombobox';
 import { ItemRow } from './ItemRow';
 import { PaymentSection } from './PaymentSection';
+import {
+    InvoiceIcon,
+    UserIcon,
+    BoxIcon,
+    MoneyIcon,
+    WarningIcon,
+    CheckCircleIcon,
+    SpinnerIcon,
+    DocumentCheckIcon,
+    PlusIcon
+} from './Icons';
 
 export const InvoiceForm: React.FC = () => {
     const { products } = useInventory();
+    const { clients } = useClients();
     const {
         formData,
         totalsPreview,
@@ -26,8 +40,13 @@ export const InvoiceForm: React.FC = () => {
             <div className="max-w-5xl mx-auto">
                 {/* Header */}
                 <div className="text-center mb-8">
+                    <div className="flex justify-center mb-2">
+                        <div className="p-3 bg-primary-100 rounded-full text-primary-600">
+                            <InvoiceIcon className="w-10 h-10" />
+                        </div>
+                    </div>
                     <h1 className="text-3xl font-bold text-gray-800 mb-2">
-                        🧾 FactureApp
+                        FactureApp
                     </h1>
                     <p className="text-gray-600">Système de Facturation Professionnel</p>
                 </div>
@@ -35,13 +54,13 @@ export const InvoiceForm: React.FC = () => {
                 {/* Alerts */}
                 {error && (
                     <div className="mb-6 p-4 bg-red-100 border border-red-300 text-red-700 rounded-lg flex items-center gap-2">
-                        <span>⚠️</span>
+                        <WarningIcon className="w-5 h-5 flex-shrink-0" />
                         <span>{error}</span>
                     </div>
                 )}
                 {success && (
                     <div className="mb-6 p-4 bg-green-100 border border-green-300 text-green-700 rounded-lg flex items-center gap-2">
-                        <span>✅</span>
+                        <CheckCircleIcon className="w-5 h-5 flex-shrink-0" />
                         <span>{success}</span>
                     </div>
                 )}
@@ -55,9 +74,23 @@ export const InvoiceForm: React.FC = () => {
                 >
                     {/* Client Information Card */}
                     <div className="card">
-                        <h3 className="text-lg font-semibold text-gray-800 border-b pb-2 mb-4">
-                            👤 Informations Client
+                        <h3 className="text-lg font-semibold text-gray-800 border-b pb-2 mb-4 flex items-center gap-2">
+                            <UserIcon className="w-5 h-5 text-gray-500" />
+                            Informations Client
                         </h3>
+
+                        {/* Client Selection Combobox */}
+                        <div className="mb-6">
+                            <ClientCombobox
+                                clients={clients}
+                                onSelect={(client) => {
+                                    updateField('clientName', client.name);
+                                    updateField('clientIce', client.ice);
+                                    updateField('clientCity', client.city);
+                                }}
+                            />
+                        </div>
+
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                             <div>
                                 <label className="label">Date</label>
@@ -100,18 +133,29 @@ export const InvoiceForm: React.FC = () => {
                                 />
                             </div>
                             <div>
-                                <label className="label">ICE * (15 caractères)</label>
+                                <label className="label">ICE * (15 chiffres)</label>
                                 <input
                                     type="text"
-                                    className="input font-mono"
+                                    className={`input font-mono ${formData.clientIce && !/^\d{15}$/.test(formData.clientIce)
+                                        ? 'border-red-500 focus:ring-red-500'
+                                        : ''
+                                        }`}
                                     maxLength={15}
                                     value={formData.clientIce}
-                                    onChange={(e) => updateField('clientIce', e.target.value)}
+                                    onChange={(e) => {
+                                        const val = e.target.value.replace(/\D/g, ''); // Only numbers
+                                        updateField('clientIce', val);
+                                    }}
                                     placeholder="000000000000000"
                                 />
-                                <span className={`text-xs ${formData.clientIce.length === 15 ? 'text-green-600' : 'text-gray-500'}`}>
-                                    {formData.clientIce.length}/15 caractères
-                                </span>
+                                <div className="flex justify-between mt-1">
+                                    <span className={`text-xs ${formData.clientIce.length === 15 ? 'text-green-600' : 'text-gray-500'}`}>
+                                        {formData.clientIce.length}/15 chiffres
+                                    </span>
+                                    {formData.clientIce && !/^\d{15}$/.test(formData.clientIce) && (
+                                        <span className="text-xs text-red-500">Doit contenir exactement 15 chiffres</span>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -119,15 +163,17 @@ export const InvoiceForm: React.FC = () => {
                     {/* Items Table Card */}
                     <div className="card">
                         <div className="flex justify-between items-center border-b pb-2 mb-4">
-                            <h3 className="text-lg font-semibold text-gray-800">
-                                📦 Articles
+                            <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                                <BoxIcon className="w-5 h-5 text-gray-500" />
+                                Articles
                             </h3>
                             <button
                                 type="button"
                                 onClick={addItem}
                                 className="btn-primary text-sm flex items-center gap-1"
                             >
-                                <span>+</span> Ajouter
+                                <PlusIcon className="w-4 h-4" />
+                                Ajouter
                             </button>
                         </div>
 
@@ -160,26 +206,27 @@ export const InvoiceForm: React.FC = () => {
 
                     {/* Totals Preview Card */}
                     <div className="card bg-gradient-to-r from-primary-50 to-blue-50">
-                        <h3 className="text-lg font-semibold text-gray-800 border-b pb-2 mb-4">
-                            💰 Récapitulatif
+                        <h3 className="text-lg font-semibold text-gray-800 border-b pb-2 mb-4 flex items-center gap-2">
+                            <MoneyIcon className="w-5 h-5 text-gray-500" />
+                            Récapitulatif
                         </h3>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                             <div className="text-center p-4 bg-white rounded-lg shadow-sm">
                                 <p className="text-sm text-gray-500">Total HT</p>
                                 <p className="text-2xl font-bold text-gray-800">
-                                    {totalsPreview.totalHT.toFixed(2)} DH
+                                    {totalsPreview.totalHT.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} DH
                                 </p>
                             </div>
                             <div className="text-center p-4 bg-white rounded-lg shadow-sm">
                                 <p className="text-sm text-gray-500">TVA (20%)</p>
                                 <p className="text-2xl font-bold text-amber-600">
-                                    {totalsPreview.totalTVA.toFixed(2)} DH
+                                    {totalsPreview.totalTVA.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} DH
                                 </p>
                             </div>
                             <div className="text-center p-4 bg-primary-600 rounded-lg shadow-sm">
                                 <p className="text-sm text-primary-100">Total TTC</p>
                                 <p className="text-2xl font-bold text-white">
-                                    {totalsPreview.totalTTC.toFixed(2)} DH
+                                    {totalsPreview.totalTTC.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} DH
                                 </p>
                             </div>
                         </div>
@@ -216,12 +263,12 @@ export const InvoiceForm: React.FC = () => {
                         >
                             {isSubmitting ? (
                                 <>
-                                    <span className="animate-spin">⏳</span>
+                                    <SpinnerIcon className="w-5 h-5" />
                                     Création en cours...
                                 </>
                             ) : (
                                 <>
-                                    <span>📄</span>
+                                    <DocumentCheckIcon className="w-5 h-5" />
                                     Créer la Facture & Générer PDF
                                 </>
                             )}
