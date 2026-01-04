@@ -52,14 +52,33 @@ export const ItemRow: React.FC<ItemRowProps> = ({
                 </select>
             </td>
             <td className="px-4 py-3">
-                <input
-                    type="number"
-                    min="0.01"
-                    step="0.01"
-                    className="input text-sm text-center"
-                    value={item.quantity || ''}
-                    onChange={(e) => onUpdate(index, 'quantity', e.target.value)}
-                />
+                <div className="flex flex-col gap-1">
+                    <input
+                        type="number"
+                        min="0.01"
+                        step="0.01"
+                        className="input text-sm text-center"
+                        value={item.quantity || ''}
+                        onChange={(e) => onUpdate(index, 'quantity', e.target.value)}
+                    />
+                    <button
+                        type="button"
+                        onClick={() => {
+                            const product = products.find(p => p.ID === item.productId);
+                            if (product) {
+                                onUpdate(index, 'quantity', product.CurrentStock);
+                            }
+                        }}
+                        disabled={!item.productId}
+                        className={`text-xs font-medium text-center ${item.productId
+                            ? 'text-primary-600 hover:text-primary-800 cursor-pointer'
+                            : 'text-gray-400 cursor-not-allowed'}`}
+                    >
+                        {item.productId
+                            ? `Max: ${products.find(p => p.ID === item.productId)?.CurrentStock}`
+                            : 'Max: -'}
+                    </button>
+                </div>
             </td>
             <td className="px-4 py-3">
                 <div className="relative">
