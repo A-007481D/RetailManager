@@ -34,16 +34,20 @@ export function GetAllClients() {
   return window['go']['main']['App']['GetAllClients']();
 }
 
-export function GetAllInvoices() {
-  return window['go']['main']['App']['GetAllInvoices']();
+export function GetAllInvoices(arg1) {
+  return window['go']['main']['App']['GetAllInvoices'](arg1);
 }
 
 export function GetAllProducts() {
   return window['go']['main']['App']['GetAllProducts']();
 }
 
-export function GetDashboardStats() {
-  return window['go']['main']['App']['GetDashboardStats']();
+export function GetAvailableYears() {
+  return window['go']['main']['App']['GetAvailableYears']();
+}
+
+export function GetDashboardStats(arg1) {
+  return window['go']['main']['App']['GetDashboardStats'](arg1);
 }
 
 export function GetInvoiceByID(arg1) {

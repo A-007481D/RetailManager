@@ -20,6 +20,8 @@ type ChequeInfo struct {
 type EffetInfo struct {
 	City         string `json:"city"`
 	DateEcheance string `json:"dateEcheance"` // Format: DD-MM-YYYY
+	Bank         string `json:"bank"`
+	Reference    string `json:"reference"`
 }
 
 // InvoiceItem represents a single line item on an invoice
@@ -30,6 +32,7 @@ type InvoiceItem struct {
 	Product     inventory.Product `json:"product"`
 	Description string            `json:"description"`
 	Quantity    float64           `json:"quantity"`
+	BuyingPrice float64           `json:"buyingPrice"` // Snapshot of product buying price at time of sale
 	PrixUnitTTC float64           `json:"prixUnitTTC"`
 	TotalTTC    float64           `json:"totalTTC"`
 }
@@ -65,6 +68,8 @@ type Invoice struct {
 
 	EffetCity         string `json:"effetCity,omitempty"`
 	EffetDateEcheance string `json:"effetDateEcheance,omitempty"`
+	EffetBank         string `json:"effetBank,omitempty"`
+	EffetReference    string `json:"effetReference,omitempty"`
 
 	// Related items
 	Items []InvoiceItem `gorm:"foreignKey:InvoiceID" json:"items"`

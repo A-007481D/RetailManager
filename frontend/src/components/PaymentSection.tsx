@@ -31,8 +31,8 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
                         type="button"
                         onClick={() => onPaymentMethodChange(method)}
                         className={`py-3 px-4 rounded-lg font-medium transition-all duration-200 border-2 ${paymentMethod === method
-                                ? 'bg-primary-600 text-white border-primary-600'
-                                : 'bg-white text-gray-700 border-gray-300 hover:border-primary-400'
+                            ? 'bg-primary-600 text-white border-primary-600'
+                            : 'bg-white text-gray-700 border-gray-300 hover:border-primary-400'
                             }`}
                     >
                         {method === 'ESPECE' && '💵 Espèce'}
@@ -77,16 +77,6 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
                                 placeholder="Ville"
                             />
                         </div>
-                        <div>
-                            <label className="label">Référence</label>
-                            <input
-                                type="text"
-                                className="input"
-                                value={chequeInfo?.reference || ''}
-                                onChange={(e) => onChequeInfoChange('reference', e.target.value)}
-                                placeholder="Référence"
-                            />
-                        </div>
                     </div>
                 </div>
             )}
@@ -96,6 +86,26 @@ export const PaymentSection: React.FC<PaymentSectionProps> = ({
                 <div className="bg-amber-50 p-4 rounded-lg space-y-3 animate-fade-in">
                     <h4 className="font-medium text-amber-800">Détails de l'Effet</h4>
                     <div className="grid grid-cols-2 gap-3">
+                        <div>
+                            <label className="label">Banque *</label>
+                            <input
+                                type="text"
+                                className="input"
+                                value={effetInfo?.bank || ''}
+                                onChange={(e) => onEffetInfoChange('bank', e.target.value)}
+                                placeholder="Nom de la banque"
+                            />
+                        </div>
+                        <div>
+                            <label className="label">Référence *</label>
+                            <input
+                                type="text"
+                                className="input"
+                                value={effetInfo?.reference || ''}
+                                onChange={(e) => onEffetInfoChange('reference', e.target.value)}
+                                placeholder="Référence"
+                            />
+                        </div>
                         <div>
                             <label className="label">Ville *</label>
                             <input

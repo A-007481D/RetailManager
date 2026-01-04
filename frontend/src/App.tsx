@@ -24,7 +24,10 @@ function App() {
                 </div>
                 <div className="flex gap-2 bg-gray-100 p-1 rounded-lg">
                     <button
-                        onClick={() => setActiveTab('dashboard')}
+                        onClick={() => {
+                            setActiveTab('dashboard');
+                            setInvoiceToEdit(null);
+                        }}
                         className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${activeTab === 'dashboard'
                             ? 'bg-white text-primary-600 shadow-sm'
                             : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'
@@ -33,7 +36,16 @@ function App() {
                         Tableau de Bord
                     </button>
                     <button
-                        onClick={() => setActiveTab('invoices')}
+                        onClick={() => {
+                            setActiveTab('invoices');
+                            // Don't clear here to allow returning to edit if desired, 
+                            // OR clear if we want "Invoices" tab to always start fresh.
+                            // User request implies they want to avoid "mistaken re-edit".
+                            // So if they click "Invoices" manually, it should probably be fresh.
+                            // But if they are editing, they are ALREADY on 'invoices'.
+                            // If they click 'invoices' while editing, maybe reset?
+                            // Let's stick to clearing on OTHER tabs for now as requested.
+                        }}
                         className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${activeTab === 'invoices'
                             ? 'bg-white text-primary-600 shadow-sm'
                             : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'
@@ -42,7 +54,10 @@ function App() {
                         Factures
                     </button>
                     <button
-                        onClick={() => setActiveTab('inventory')}
+                        onClick={() => {
+                            setActiveTab('inventory');
+                            setInvoiceToEdit(null);
+                        }}
                         className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${activeTab === 'inventory'
                             ? 'bg-white text-primary-600 shadow-sm'
                             : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'
@@ -51,7 +66,10 @@ function App() {
                         Stock
                     </button>
                     <button
-                        onClick={() => setActiveTab('clients')}
+                        onClick={() => {
+                            setActiveTab('clients');
+                            setInvoiceToEdit(null);
+                        }}
                         className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${activeTab === 'clients'
                             ? 'bg-white text-primary-600 shadow-sm'
                             : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'

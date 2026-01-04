@@ -21,11 +21,13 @@ export function GeneratePDF(arg1:number):Promise<string>;
 
 export function GetAllClients():Promise<Array<client.Client>>;
 
-export function GetAllInvoices():Promise<Array<invoice.InvoiceResponse>>;
+export function GetAllInvoices(arg1:number):Promise<Array<invoice.InvoiceResponse>>;
 
 export function GetAllProducts():Promise<Array<inventory.Product>>;
 
-export function GetDashboardStats():Promise<main.DashboardStats>;
+export function GetAvailableYears():Promise<Array<number>>;
+
+export function GetDashboardStats(arg1:number):Promise<main.DashboardStats>;
 
 export function GetInvoiceByID(arg1:number):Promise<invoice.InvoiceResponse>;
 

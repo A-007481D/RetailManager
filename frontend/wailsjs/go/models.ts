@@ -146,9 +146,27 @@ export namespace invoice {
 	        this.reference = source["reference"];
 	    }
 	}
+	export class ClientStat {
+	    name: string;
+	    totalSpend: number;
+	    invoiceCount: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new ClientStat(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.totalSpend = source["totalSpend"];
+	        this.invoiceCount = source["invoiceCount"];
+	    }
+	}
 	export class EffetInfo {
 	    city: string;
 	    dateEcheance: string;
+	    bank: string;
+	    reference: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new EffetInfo(source);
@@ -158,6 +176,8 @@ export namespace invoice {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.city = source["city"];
 	        this.dateEcheance = source["dateEcheance"];
+	        this.bank = source["bank"];
+	        this.reference = source["reference"];
 	    }
 	}
 	export class InvoiceItemRequest {
@@ -231,6 +251,7 @@ export namespace invoice {
 	    product: inventory.Product;
 	    description: string;
 	    quantity: number;
+	    buyingPrice: number;
 	    prixUnitTTC: number;
 	    totalTTC: number;
 	
@@ -246,6 +267,7 @@ export namespace invoice {
 	        this.product = this.convertValues(source["product"], inventory.Product);
 	        this.description = source["description"];
 	        this.quantity = source["quantity"];
+	        this.buyingPrice = source["buyingPrice"];
 	        this.prixUnitTTC = source["prixUnitTTC"];
 	        this.totalTTC = source["totalTTC"];
 	    }
@@ -327,10 +349,44 @@ export namespace invoice {
 		    return a;
 		}
 	}
+	export class ProductStat {
+	    name: string;
+	    quantitySold: number;
+	    revenue: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new ProductStat(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.quantitySold = source["quantitySold"];
+	        this.revenue = source["revenue"];
+	    }
+	}
+	export class MonthlyRevenue {
+	    month: string;
+	    revenue: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new MonthlyRevenue(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.month = source["month"];
+	        this.revenue = source["revenue"];
+	    }
+	}
 	export class InvoiceStats {
 	    TotalRevenue: number;
+	    TotalNetProfit: number;
 	    TotalInvoices: number;
 	    RecentInvoices: InvoiceResponse[];
+	    MonthlyRevenue: MonthlyRevenue[];
+	    TopClients: ClientStat[];
+	    TopProducts: ProductStat[];
 	
 	    static createFrom(source: any = {}) {
 	        return new InvoiceStats(source);
@@ -339,8 +395,12 @@ export namespace invoice {
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.TotalRevenue = source["TotalRevenue"];
+	        this.TotalNetProfit = source["TotalNetProfit"];
 	        this.TotalInvoices = source["TotalInvoices"];
 	        this.RecentInvoices = this.convertValues(source["RecentInvoices"], InvoiceResponse);
+	        this.MonthlyRevenue = this.convertValues(source["MonthlyRevenue"], MonthlyRevenue);
+	        this.TopClients = this.convertValues(source["TopClients"], ClientStat);
+	        this.TopProducts = this.convertValues(source["TopProducts"], ProductStat);
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
@@ -361,6 +421,7 @@ export namespace invoice {
 		    return a;
 		}
 	}
+	
 
 }
 

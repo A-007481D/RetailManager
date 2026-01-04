@@ -67,14 +67,19 @@ func (a *App) UpdateInvoice(id uint, req invoice.InvoiceCreateRequest) (*invoice
 	return a.invoiceService.UpdateInvoice(id, req)
 }
 
-// GetAllInvoices returns all invoices
-func (a *App) GetAllInvoices() ([]invoice.InvoiceResponse, error) {
-	return a.invoiceService.GetAllInvoices()
+// GetAllInvoices returns all invoices for a specific year
+func (a *App) GetAllInvoices(year int) ([]invoice.InvoiceResponse, error) {
+	return a.invoiceService.GetAllInvoices(year)
 }
 
 // GetInvoiceByID returns a single invoice by ID
 func (a *App) GetInvoiceByID(id uint) (*invoice.InvoiceResponse, error) {
 	return a.invoiceService.GetInvoiceByID(id)
+}
+
+// GetAvailableYears returns available years
+func (a *App) GetAvailableYears() ([]int, error) {
+	return a.invoiceService.GetAvailableYears()
 }
 
 // GeneratePDF generates a PDF for the invoice and returns the file path
@@ -125,8 +130,8 @@ type DashboardStats struct {
 	InventoryStats *inventory.InventoryStats
 }
 
-func (a *App) GetDashboardStats() (*DashboardStats, error) {
-	invStats, err := a.invoiceService.GetStats()
+func (a *App) GetDashboardStats(year int) (*DashboardStats, error) {
+	invStats, err := a.invoiceService.GetStats(year)
 	if err != nil {
 		return nil, err
 	}

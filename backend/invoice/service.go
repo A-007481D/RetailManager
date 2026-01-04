@@ -62,10 +62,19 @@ func (s *Service) CreateInvoice(req InvoiceCreateRequest) (*InvoiceResponse, err
 	items := make([]InvoiceItem, len(req.Items))
 	for i, item := range req.Items {
 		itemTotal := item.Quantity * item.PrixUnitTTC
+		// Fetch product for details
+		var product inventory.Product
+		if err := tx.First(&product, item.ProductID).Error; err != nil {
+			tx.Rollback()
+			return nil, fmt.Errorf("product not found: %w", err)
+		}
+
 		items[i] = InvoiceItem{
 			ProductID:   item.ProductID,
+			Product:     product,
 			Description: item.Description,
 			Quantity:    item.Quantity,
+			BuyingPrice: product.BuyingPrice, // Snapshot buying price
 			PrixUnitTTC: item.PrixUnitTTC,
 			TotalTTC:    itemTotal,
 		}
@@ -121,20 +130,20 @@ func (s *Service) CreateInvoice(req InvoiceCreateRequest) (*InvoiceResponse, err
 		Items:             items,
 	}
 
-	// Set payment details based on method
-	if req.ChequeInfo != nil && req.PaymentMethod == "CHEQUE" {
+	// Set	// Payment Info
+	invoice.PaymentMethod = req.PaymentMethod
+	if req.PaymentMethod == "CHEQUE" && req.ChequeInfo != nil {
 		invoice.ChequeNumber = req.ChequeInfo.Number
 		invoice.ChequeBank = req.ChequeInfo.Bank
 		invoice.ChequeCity = req.ChequeInfo.City
-		invoice.ChequeReference = req.ChequeInfo.Reference
-	}
-
-	if req.EffetInfo != nil && req.PaymentMethod == "EFFET" {
+		// Reference removed for Cheque
+	} else if req.PaymentMethod == "EFFET" && req.EffetInfo != nil {
 		invoice.EffetCity = req.EffetInfo.City
 		invoice.EffetDateEcheance = req.EffetInfo.DateEcheance
+		invoice.EffetBank = req.EffetInfo.Bank
+		invoice.EffetReference = req.EffetInfo.Reference
 	}
 
-	// Save to database
 	// Save to database
 	if err := tx.Create(&invoice).Error; err != nil {
 		tx.Rollback()
@@ -185,76 +194,76 @@ func (s *Service) UpdateInvoice(id uint, req InvoiceCreateRequest) (*InvoiceResp
 		return nil, fmt.Errorf("failed to delete old items: %w", err)
 	}
 
-	// 4. Process NEW items (Calculate totals and Decrease Stock)
-	var totalTTC float64
-	newItems := make([]InvoiceItem, len(req.Items))
-	for i, item := range req.Items {
-		itemTotal := item.Quantity * item.PrixUnitTTC
-		newItems[i] = InvoiceItem{
-			InvoiceID:   id, // Link to existing invoice
-			ProductID:   item.ProductID,
-			Description: item.Description,
-			Quantity:    item.Quantity,
-			PrixUnitTTC: item.PrixUnitTTC,
-			TotalTTC:    itemTotal,
-		}
-		totalTTC += itemTotal
-
-		// Decrease stock for NEW quantity
-		if err := s.inventoryService.DecreaseStock(tx, item.ProductID, int(item.Quantity)); err != nil {
-			tx.Rollback()
-			return nil, fmt.Errorf("insufficient stock for new item %s: %w", item.Description, err)
-		}
-	}
-
-	// 5. Recalculate Invoice Totals
-	totalHT := totalTTC / 1.20
-	totalTVA := totalTTC - totalHT
-
-	totalHT = math.Round(totalHT*100) / 100
-	totalTVA = math.Round(totalTVA*100) / 100
-	totalTTC = math.Round(totalTTC*100) / 100
-	totalInWords := s.ConvertToWords(totalTTC)
-
-	// 6. Update Invoice Fields
+	// 3. Update Invoice Fields
+	invoice.Date, _ = time.Parse("02-01-2006", req.Date)
+	invoice.CustomFormattedID = req.CustomFormattedID
 	invoice.ClientName = req.ClientName
 	invoice.ClientCity = req.ClientCity
 	invoice.ClientICE = req.ClientICE
-	invoice.Date, _ = time.Parse("02-01-2006", req.Date) // Assuming validated in frontend/handler
-	invoice.TotalHT = totalHT
-	invoice.TotalTVA = totalTVA
-	invoice.TotalTTC = totalTTC
-	invoice.TotalInWords = totalInWords
 	invoice.PaymentMethod = req.PaymentMethod
-	invoice.Items = newItems // GORM will create these
 
-	if req.CustomFormattedID != "" {
-		invoice.CustomFormattedID = req.CustomFormattedID
-	}
+	// Clear old payment info
+	invoice.ChequeNumber = ""
+	invoice.ChequeBank = ""
+	invoice.ChequeCity = ""
+	invoice.ChequeReference = ""
+	invoice.EffetCity = ""
+	invoice.EffetDateEcheance = ""
+	invoice.EffetBank = ""
+	invoice.EffetReference = ""
 
-	// Update payment details
-	if req.ChequeInfo != nil && req.PaymentMethod == "CHEQUE" {
+	if req.PaymentMethod == "CHEQUE" && req.ChequeInfo != nil {
 		invoice.ChequeNumber = req.ChequeInfo.Number
 		invoice.ChequeBank = req.ChequeInfo.Bank
 		invoice.ChequeCity = req.ChequeInfo.City
-		invoice.ChequeReference = req.ChequeInfo.Reference
-	} else {
-		// Clear if changed
-		invoice.ChequeNumber = ""
-		invoice.ChequeBank = ""
-		invoice.ChequeCity = ""
-		invoice.ChequeReference = ""
-	}
-
-	if req.EffetInfo != nil && req.PaymentMethod == "EFFET" {
+	} else if req.PaymentMethod == "EFFET" && req.EffetInfo != nil {
 		invoice.EffetCity = req.EffetInfo.City
 		invoice.EffetDateEcheance = req.EffetInfo.DateEcheance
-	} else {
-		invoice.EffetCity = ""
-		invoice.EffetDateEcheance = ""
+		invoice.EffetBank = req.EffetInfo.Bank
+		invoice.EffetReference = req.EffetInfo.Reference
 	}
 
-	// 7. Save Invoice
+	// 4. Process NEW items
+	var newItems []InvoiceItem
+	var totalTTC float64
+
+	for _, itemReq := range req.Items {
+		// Decrement stock for NEW item
+		if err := s.inventoryService.DecreaseStock(tx, itemReq.ProductID, int(itemReq.Quantity)); err != nil {
+			tx.Rollback()
+			return nil, err
+		}
+
+		totalItem := itemReq.Quantity * itemReq.PrixUnitTTC
+		totalTTC += totalItem
+
+		// Fetch product for details
+		var product inventory.Product
+		if err := tx.First(&product, itemReq.ProductID).Error; err != nil {
+			tx.Rollback()
+			return nil, fmt.Errorf("product not found: %w", err)
+		}
+
+		newItems = append(newItems, InvoiceItem{
+			ProductID:   itemReq.ProductID,
+			Product:     product,
+			Description: itemReq.Description,
+			Quantity:    itemReq.Quantity,
+			BuyingPrice: product.BuyingPrice, // Snapshot buying price
+			PrixUnitTTC: itemReq.PrixUnitTTC,
+			TotalTTC:    totalItem,
+		})
+	}
+
+	// Calculate totals
+	totals := s.CalculateTotals(totalTTC)
+	invoice.TotalHT = totals["totalHT"].(float64)
+	invoice.TotalTVA = totals["totalTVA"].(float64)
+	invoice.TotalTTC = totals["totalTTC"].(float64)
+	invoice.TotalInWords = totals["totalInWords"].(string)
+	invoice.Items = newItems
+
+	// Save updated invoice
 	if err := tx.Save(&invoice).Error; err != nil {
 		tx.Rollback()
 		return nil, fmt.Errorf("failed to update invoice: %w", err)
@@ -268,11 +277,17 @@ func (s *Service) UpdateInvoice(id uint, req InvoiceCreateRequest) (*InvoiceResp
 	return s.toResponse(&invoice), nil
 }
 
-// GetAllInvoices returns all invoices
-func (s *Service) GetAllInvoices() ([]InvoiceResponse, error) {
+// GetAllInvoices returns all invoices for a specific year
+func (s *Service) GetAllInvoices(year int) ([]InvoiceResponse, error) {
 	db := database.GetDB()
+
+	// Default to current year if 0
+	if year == 0 {
+		year = time.Now().Year()
+	}
+
 	var invoices []Invoice
-	if err := db.Preload("Items").Order("created_at DESC").Find(&invoices).Error; err != nil {
+	if err := db.Preload("Items").Where("year = ?", year).Order("created_at DESC").Find(&invoices).Error; err != nil {
 		return nil, err
 	}
 
@@ -291,6 +306,30 @@ func (s *Service) GetInvoiceByID(id uint) (*InvoiceResponse, error) {
 		return nil, fmt.Errorf("invoice not found: %w", err)
 	}
 	return s.toResponse(&invoice), nil
+}
+
+// GetAvailableYears returns a list of years available in the database
+func (s *Service) GetAvailableYears() ([]int, error) {
+	db := database.GetDB()
+	var years []int
+	if err := db.Model(&Invoice{}).Distinct("year").Order("year desc").Pluck("year", &years).Error; err != nil {
+		return nil, err
+	}
+
+	// Ensure current year is always included
+	currentYear := time.Now().Year()
+	found := false
+	for _, y := range years {
+		if y == currentYear {
+			found = true
+			break
+		}
+	}
+	if !found {
+		years = append([]int{currentYear}, years...)
+	}
+
+	return years, nil
 }
 
 // ConvertToWords converts a number to French words
@@ -361,24 +400,52 @@ func (s *Service) toResponse(inv *Invoice) *InvoiceResponse {
 		resp.EffetInfo = &EffetInfo{
 			City:         inv.EffetCity,
 			DateEcheance: inv.EffetDateEcheance,
+			Bank:         inv.EffetBank,
+			Reference:    inv.EffetReference,
 		}
 	}
 
 	return resp
 }
 
-type InvoiceStats struct {
-	TotalRevenue   float64
-	TotalInvoices  int64
-	RecentInvoices []InvoiceResponse
+type MonthlyRevenue struct {
+	Month   string  `json:"month"`
+	Revenue float64 `json:"revenue"`
 }
 
-func (s *Service) GetStats() (*InvoiceStats, error) {
+type ClientStat struct {
+	Name         string  `json:"name"`
+	TotalSpend   float64 `json:"totalSpend"`
+	InvoiceCount int64   `json:"invoiceCount"`
+}
+
+type ProductStat struct {
+	Name         string  `json:"name"`
+	QuantitySold int     `json:"quantitySold"`
+	Revenue      float64 `json:"revenue"`
+}
+
+type InvoiceStats struct {
+	TotalRevenue   float64
+	TotalNetProfit float64
+	TotalInvoices  int64
+	RecentInvoices []InvoiceResponse
+	MonthlyRevenue []MonthlyRevenue
+	TopClients     []ClientStat
+	TopProducts    []ProductStat
+}
+
+func (s *Service) GetStats(year int) (*InvoiceStats, error) {
 	db := database.GetDB()
 	var stats InvoiceStats
 
+	// Default to current year if 0
+	if year == 0 {
+		year = time.Now().Year()
+	}
+
 	// Total Invoices
-	if err := db.Model(&Invoice{}).Count(&stats.TotalInvoices).Error; err != nil {
+	if err := db.Model(&Invoice{}).Where("year = ?", year).Count(&stats.TotalInvoices).Error; err != nil {
 		return nil, err
 	}
 
@@ -386,19 +453,114 @@ func (s *Service) GetStats() (*InvoiceStats, error) {
 	var result struct {
 		Total float64
 	}
-	if err := db.Model(&Invoice{}).Select("sum(total_ttc) as total").Scan(&result).Error; err != nil {
+	if err := db.Model(&Invoice{}).Where("year = ?", year).Select("sum(total_ttc) as total").Scan(&result).Error; err != nil {
 		return nil, err
 	}
 	stats.TotalRevenue = result.Total
 
-	// Recent Invoices
+	// Total Net Profit
+	// Profit = Sum( (Item.TotalTTC) - (Item.BuyingPrice * Item.Quantity) )
+	// We use the stored BuyingPrice from invoice_items for historical accuracy
+	var profitResult struct {
+		Total float64
+	}
+	err := db.Table("invoice_items").
+		Select("SUM(invoice_items.total_ttc - (invoice_items.buying_price * invoice_items.quantity)) as total").
+		Joins("JOIN invoices ON invoice_items.invoice_id = invoices.id").
+		Where("invoices.deleted_at IS NULL AND invoices.year = ?", year).
+		Scan(&profitResult).Error
+
+	if err != nil {
+		return nil, err
+	}
+	stats.TotalNetProfit = profitResult.Total
+
+	// Recent Invoices (Filtered by year)
 	var recent []Invoice
-	if err := db.Preload("Items").Order("created_at desc").Limit(5).Find(&recent).Error; err != nil {
+	if err := db.Preload("Items").Where("year = ?", year).Order("created_at desc").Limit(5).Find(&recent).Error; err != nil {
 		return nil, err
 	}
 
 	for _, inv := range recent {
 		stats.RecentInvoices = append(stats.RecentInvoices, *s.toResponse(&inv))
+	}
+
+	// Monthly Revenue (Selected Year)
+	rows, err := db.Model(&Invoice{}).
+		Select("strftime('%m', date) as month, sum(total_ttc) as revenue").
+		Where("year = ?", year).
+		Group("month").
+		Order("month").
+		Rows()
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	// Initialize all months with 0
+	revenueMap := make(map[string]float64)
+	months := []string{"01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"}
+	for _, m := range months {
+		revenueMap[m] = 0
+	}
+
+	for rows.Next() {
+		var month string
+		var revenue float64
+		if err := rows.Scan(&month, &revenue); err == nil {
+			revenueMap[month] = revenue
+		}
+	}
+
+	// Convert to slice
+	monthNames := []string{"Jan", "Fév", "Mar", "Avr", "Mai", "Juin", "Juil", "Août", "Sep", "Oct", "Nov", "Déc"}
+	for i, m := range months {
+		stats.MonthlyRevenue = append(stats.MonthlyRevenue, MonthlyRevenue{
+			Month:   monthNames[i],
+			Revenue: revenueMap[m],
+		})
+	}
+
+	// Top Clients (Selected Year)
+	clientRows, err := db.Model(&Invoice{}).
+		Select("client_name, sum(total_ttc) as total_spend, count(id) as invoice_count").
+		Where("year = ?", year).
+		Group("client_name").
+		Order("total_spend desc").
+		Limit(5).
+		Rows()
+	if err != nil {
+		return nil, err
+	}
+	defer clientRows.Close()
+
+	for clientRows.Next() {
+		var cs ClientStat
+		if err := clientRows.Scan(&cs.Name, &cs.TotalSpend, &cs.InvoiceCount); err == nil {
+			stats.TopClients = append(stats.TopClients, cs)
+		}
+	}
+
+	// Top Products (Selected Year)
+	// Need to join with invoices to filter by year
+	productRows, err := db.Table("invoice_items").
+		Select("invoice_items.description, sum(invoice_items.quantity) as quantity_sold, sum(invoice_items.total_ttc) as revenue").
+		Joins("JOIN invoices ON invoice_items.invoice_id = invoices.id").
+		Where("invoices.year = ? AND invoices.deleted_at IS NULL", year).
+		Group("invoice_items.description").
+		Order("quantity_sold desc").
+		Limit(5).
+		Rows()
+	if err != nil {
+		return nil, err
+	}
+	defer productRows.Close()
+
+	for productRows.Next() {
+		var ps ProductStat
+		if err := productRows.Scan(&ps.Name, &ps.QuantitySold, &ps.Revenue); err == nil {
+			stats.TopProducts = append(stats.TopProducts, ps)
+		}
 	}
 
 	return &stats, nil

@@ -15,12 +15,13 @@ export interface ChequeInfo {
     number: string;
     bank: string;
     city: string;
-    reference: string;
 }
 
 export interface EffetInfo {
     city: string;
     dateEcheance: string;
+    bank: string;
+    reference: string;
 }
 
 export interface InvoiceFormData {
@@ -155,23 +156,17 @@ export function useInvoice() {
         }));
     }, []);
 
-    const updateChequeInfo = useCallback((field: keyof ChequeInfo, value: string) => {
-        setFormData((prev) => ({
+    const handleChequeInfoChange = useCallback((field: keyof ChequeInfo, value: string) => {
+        setFormData(prev => ({
             ...prev,
-            chequeInfo: {
-                ...(prev.chequeInfo || { number: '', bank: '', city: '', reference: '' }),
-                [field]: value,
-            },
+            chequeInfo: prev.chequeInfo ? { ...prev.chequeInfo, [field]: value } : { number: '', bank: '', city: '', [field]: value }
         }));
     }, []);
 
-    const updateEffetInfo = useCallback((field: keyof EffetInfo, value: string) => {
-        setFormData((prev) => ({
+    const handleEffetInfoChange = useCallback((field: keyof EffetInfo, value: string) => {
+        setFormData(prev => ({
             ...prev,
-            effetInfo: {
-                ...(prev.effetInfo || { city: '', dateEcheance: '' }),
-                [field]: value,
-            },
+            effetInfo: prev.effetInfo ? { ...prev.effetInfo, [field]: value } : { city: '', dateEcheance: '', bank: '', reference: '', [field]: value }
         }));
     }, []);
 
@@ -196,6 +191,21 @@ export function useInvoice() {
         return null;
     }, [formData]);
 
+    const resetForm = useCallback(() => {
+        setFormData({
+            date: formatDate(new Date()),
+            customFormattedId: '',
+            clientName: '',
+            clientCity: '',
+            clientIce: '',
+            paymentMethod: 'ESPECE',
+            chequeInfo: { number: '', bank: '', city: '' },
+            effetInfo: { city: '', dateEcheance: '', bank: '', reference: '' },
+            items: [emptyItem()]
+        });
+        setEditingId(null);
+    }, []);
+
     const loadInvoice = useCallback((inv: any) => {
         setEditingId(inv.id);
         setFormData({
@@ -208,13 +218,14 @@ export function useInvoice() {
             chequeInfo: inv.chequeInfo ? {
                 number: inv.chequeInfo.number,
                 bank: inv.chequeInfo.bank,
-                city: inv.chequeInfo.city,
-                reference: inv.chequeInfo.reference,
-            } : undefined,
+                city: inv.chequeInfo.city
+            } : { number: '', bank: '', city: '' },
             effetInfo: inv.effetInfo ? {
                 city: inv.effetInfo.city,
                 dateEcheance: inv.effetInfo.dateEcheance,
-            } : undefined,
+                bank: inv.effetInfo.bank || '',
+                reference: inv.effetInfo.reference || ''
+            } : { city: '', dateEcheance: '', bank: '', reference: '' },
             items: inv.items.map((item: any) => ({
                 productId: item.productId,
                 description: item.description,
@@ -222,19 +233,6 @@ export function useInvoice() {
                 prixUnitTTC: item.prixUnitTTC,
                 totalTTC: item.totalTTC,
             })),
-        });
-    }, []);
-
-    const resetForm = useCallback(() => {
-        setEditingId(null);
-        setFormData({
-            date: formatDate(new Date()),
-            customFormattedId: '',
-            clientName: '',
-            clientCity: '',
-            clientIce: '',
-            paymentMethod: 'ESPECE',
-            items: [emptyItem()],
         });
     }, []);
 
@@ -307,8 +305,8 @@ export function useInvoice() {
         updateItem,
         addItem,
         removeItem,
-        updateChequeInfo,
-        updateEffetInfo,
+        updateChequeInfo: handleChequeInfoChange,
+        updateEffetInfo: handleEffetInfoChange,
         submitInvoice,
         loadInvoice,
         resetForm,
