@@ -55,3 +55,12 @@ func (s *Service) CreateProduct(product Product) (*Product, error) {
 	}
 	return &product, nil
 }
+
+// UpdateProduct updates an existing product
+func (s *Service) UpdateProduct(product Product) error {
+	db := database.GetDB()
+	if err := db.Save(&product).Error; err != nil {
+		return fmt.Errorf("failed to update product: %w", err)
+	}
+	return nil
+}

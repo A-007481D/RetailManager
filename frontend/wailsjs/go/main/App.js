@@ -37,3 +37,7 @@ export function GetTotalInWords(arg1) {
 export function OpenPDF(arg1) {
   return window['go']['main']['App']['OpenPDF'](arg1);
 }
+
+export function UpdateProduct(arg1) {
+  return window['go']['main']['App']['UpdateProduct'](arg1);
+}

@@ -20,3 +20,5 @@ export function GetInvoiceByID(arg1:number):Promise<invoice.InvoiceResponse>;
 export function GetTotalInWords(arg1:number):Promise<string>;
 
 export function OpenPDF(arg1:string):Promise<void>;
+
+export function UpdateProduct(arg1:inventory.Product):Promise<void>;

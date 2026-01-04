@@ -3,9 +3,10 @@ import { useInventory } from '../hooks/useInventory';
 import { Product } from '../types/inventory';
 
 export const ProductList: React.FC = () => {
-    const { products, loading, error, addProduct } = useInventory();
+    const { products, loading, error, addProduct, updateProduct } = useInventory();
     const [isAdding, setIsAdding] = useState(false);
-    const [newProduct, setNewProduct] = useState<Partial<Product>>({
+    const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+    const [formData, setFormData] = useState<Partial<Product>>({
         Reference: '',
         Name: '',
         Category: '',
@@ -15,22 +16,39 @@ export const ProductList: React.FC = () => {
         MinStockLevel: 5,
     });
 
+    const resetForm = () => {
+        setFormData({
+            Reference: '',
+            Name: '',
+            Category: '',
+            BuyingPrice: 0,
+            SellingPriceTTC: 0,
+            CurrentStock: 0,
+            MinStockLevel: 5,
+        });
+        setEditingProduct(null);
+        setIsAdding(false);
+    };
+
+    const handleEdit = (product: Product) => {
+        setEditingProduct(product);
+        setFormData({ ...product });
+        setIsAdding(true);
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!newProduct.Reference || !newProduct.Name) return;
+        if (!formData.Reference || !formData.Name) return;
 
-        const success = await addProduct(newProduct as Product);
+        let success = false;
+        if (editingProduct) {
+            success = await updateProduct(formData as Product);
+        } else {
+            success = await addProduct(formData as Product);
+        }
+
         if (success) {
-            setIsAdding(false);
-            setNewProduct({
-                Reference: '',
-                Name: '',
-                Category: '',
-                BuyingPrice: 0,
-                SellingPriceTTC: 0,
-                CurrentStock: 0,
-                MinStockLevel: 5,
-            });
+            resetForm();
         }
     };
 
@@ -42,7 +60,10 @@ export const ProductList: React.FC = () => {
             <div className="flex justify-between items-center mb-6">
                 <h2 className="text-2xl font-bold text-gray-800">📦 Stock & Produits</h2>
                 <button
-                    onClick={() => setIsAdding(!isAdding)}
+                    onClick={() => {
+                        resetForm();
+                        setIsAdding(!isAdding);
+                    }}
                     className="btn-primary"
                 >
                     {isAdding ? 'Annuler' : '+ Nouveau Produit'}
@@ -51,23 +72,26 @@ export const ProductList: React.FC = () => {
 
             {isAdding && (
                 <div className="card mb-6">
-                    <h3 className="text-lg font-semibold mb-4">Nouveau Produit</h3>
+                    <h3 className="text-lg font-semibold mb-4">
+                        {editingProduct ? 'Modifier Produit' : 'Nouveau Produit'}
+                    </h3>
                     <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label className="label">Référence</label>
                             <input
                                 className="input"
-                                value={newProduct.Reference}
-                                onChange={e => setNewProduct({ ...newProduct, Reference: e.target.value })}
+                                value={formData.Reference}
+                                onChange={e => setFormData({ ...formData, Reference: e.target.value })}
                                 placeholder="REF-001"
+                                disabled={!!editingProduct} // Disable reference editing to avoid issues
                             />
                         </div>
                         <div>
                             <label className="label">Nom</label>
                             <input
                                 className="input"
-                                value={newProduct.Name}
-                                onChange={e => setNewProduct({ ...newProduct, Name: e.target.value })}
+                                value={formData.Name}
+                                onChange={e => setFormData({ ...formData, Name: e.target.value })}
                                 placeholder="Produit X"
                             />
                         </div>
@@ -75,8 +99,8 @@ export const ProductList: React.FC = () => {
                             <label className="label">Catégorie</label>
                             <input
                                 className="input"
-                                value={newProduct.Category}
-                                onChange={e => setNewProduct({ ...newProduct, Category: e.target.value })}
+                                value={formData.Category}
+                                onChange={e => setFormData({ ...formData, Category: e.target.value })}
                                 placeholder="Général"
                             />
                         </div>
@@ -85,8 +109,8 @@ export const ProductList: React.FC = () => {
                             <input
                                 type="number"
                                 className="input"
-                                value={newProduct.CurrentStock}
-                                onChange={e => setNewProduct({ ...newProduct, CurrentStock: parseInt(e.target.value) || 0 })}
+                                value={formData.CurrentStock}
+                                onChange={e => setFormData({ ...formData, CurrentStock: parseInt(e.target.value) || 0 })}
                             />
                         </div>
                         <div>
@@ -94,8 +118,8 @@ export const ProductList: React.FC = () => {
                             <input
                                 type="number"
                                 className="input"
-                                value={newProduct.BuyingPrice}
-                                onChange={e => setNewProduct({ ...newProduct, BuyingPrice: parseFloat(e.target.value) || 0 })}
+                                value={formData.BuyingPrice}
+                                onChange={e => setFormData({ ...formData, BuyingPrice: parseFloat(e.target.value) || 0 })}
                             />
                         </div>
                         <div>
@@ -103,13 +127,13 @@ export const ProductList: React.FC = () => {
                             <input
                                 type="number"
                                 className="input"
-                                value={newProduct.SellingPriceTTC}
-                                onChange={e => setNewProduct({ ...newProduct, SellingPriceTTC: parseFloat(e.target.value) || 0 })}
+                                value={formData.SellingPriceTTC}
+                                onChange={e => setFormData({ ...formData, SellingPriceTTC: parseFloat(e.target.value) || 0 })}
                             />
                         </div>
                         <div className="md:col-span-2">
                             <button type="submit" className="btn-success w-full">
-                                Enregistrer
+                                {editingProduct ? 'Mettre à jour' : 'Enregistrer'}
                             </button>
                         </div>
                     </form>
@@ -125,11 +149,12 @@ export const ProductList: React.FC = () => {
                             <th className="px-4 py-2 text-right">Stock</th>
                             <th className="px-4 py-2 text-right">Prix Vente</th>
                             <th className="px-4 py-2 text-center">Statut</th>
+                            <th className="px-4 py-2 text-center">Actions</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y">
                         {products.map(p => (
-                            <tr key={p.ID}>
+                            <tr key={p.ID} className="hover:bg-gray-50">
                                 <td className="px-4 py-2 font-mono text-sm">{p.Reference}</td>
                                 <td className="px-4 py-2">{p.Name}</td>
                                 <td className="px-4 py-2 text-right font-bold">
@@ -148,6 +173,14 @@ export const ProductList: React.FC = () => {
                                             OK
                                         </span>
                                     )}
+                                </td>
+                                <td className="px-4 py-2 text-center">
+                                    <button
+                                        onClick={() => handleEdit(p)}
+                                        className="text-primary-600 hover:text-primary-800 text-sm font-semibold"
+                                    >
+                                        Modifier
+                                    </button>
                                 </td>
                             </tr>
                         ))}

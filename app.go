@@ -98,3 +98,8 @@ func (a *App) CreateProduct(product inventory.Product) (*inventory.Product, erro
 func (a *App) GetAllProducts() ([]inventory.Product, error) {
 	return a.inventoryService.GetAllProducts()
 }
+
+// UpdateProduct updates an existing product
+func (a *App) UpdateProduct(product inventory.Product) error {
+	return a.inventoryService.UpdateProduct(product)
+}
