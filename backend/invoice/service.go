@@ -54,8 +54,8 @@ func (s *Service) CreateInvoice(req InvoiceCreateRequest) (*InvoiceResponse, err
 		return nil, fmt.Errorf("ICE must be exactly 15 characters, got %d", len(req.ClientICE))
 	}
 
-	// Get current year
-	currentYear := time.Now().Year()
+	// Get year from the invoice date (not system date)
+	invoiceYear := date.Year()
 
 	// Calculate TTC from items
 	var totalTTC float64
@@ -100,9 +100,9 @@ func (s *Service) CreateInvoice(req InvoiceCreateRequest) (*InvoiceResponse, err
 	// Convert total to words (French)
 	totalInWords := s.ConvertToWords(totalTTC)
 
-	// Auto-numbering: get last sequence number for current year
+	// Auto-numbering: get last sequence number for the invoice's year
 	var lastInvoice Invoice
-	tx.Where("year = ?", currentYear).Order("sequence_number DESC").First(&lastInvoice)
+	tx.Where("year = ?", invoiceYear).Order("sequence_number DESC").First(&lastInvoice)
 
 	nextSequence := 1
 	if lastInvoice.ID != 0 {
@@ -110,14 +110,14 @@ func (s *Service) CreateInvoice(req InvoiceCreateRequest) (*InvoiceResponse, err
 	}
 
 	// Format: "0001 - 2025"
-	formattedID := fmt.Sprintf("%04d - %d", nextSequence, currentYear)
+	formattedID := fmt.Sprintf("%04d - %d", nextSequence, invoiceYear)
 
 	// Create invoice
 	invoice := Invoice{
 		FormattedID:       formattedID,
 		CustomFormattedID: req.CustomFormattedID,
 		SequenceNumber:    nextSequence,
-		Year:              currentYear,
+		Year:              invoiceYear,
 		Date:              date,
 		ClientName:        req.ClientName,
 		ClientCity:        req.ClientCity,
