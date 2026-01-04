@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Product } from '../types/inventory';
-import { CreateProduct, GetAllProducts, UpdateProduct } from '../../wailsjs/go/main/App';
+import { CreateProduct, GetAllProducts, UpdateProduct, DeleteProduct } from '../../wailsjs/go/main/App';
 
 export const useInventory = () => {
     const [products, setProducts] = useState<Product[]>([]);
@@ -48,6 +48,20 @@ export const useInventory = () => {
         }
     };
 
+    const deleteProduct = async (id: number) => {
+        setLoading(true);
+        try {
+            await DeleteProduct(id);
+            await fetchProducts();
+            return true;
+        } catch (err: any) {
+            setError(err.message || 'Failed to delete product');
+            return false;
+        } finally {
+            setLoading(false);
+        }
+    };
+
     useEffect(() => {
         fetchProducts();
     }, []);
@@ -59,5 +73,6 @@ export const useInventory = () => {
         fetchProducts,
         addProduct,
         updateProduct,
+        deleteProduct,
     };
 };
