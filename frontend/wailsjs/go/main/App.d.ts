@@ -37,4 +37,6 @@ export function SearchClients(arg1:string):Promise<Array<client.Client>>;
 
 export function UpdateClient(arg1:client.Client):Promise<void>;
 
+export function UpdateInvoice(arg1:number,arg2:invoice.InvoiceCreateRequest):Promise<invoice.InvoiceResponse>;
+
 export function UpdateProduct(arg1:inventory.Product):Promise<void>;

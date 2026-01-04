@@ -60,6 +60,7 @@ export const ItemRow: React.FC<ItemRowProps> = ({
                         className="input text-sm text-center"
                         value={item.quantity || ''}
                         onChange={(e) => onUpdate(index, 'quantity', e.target.value)}
+                        onFocus={(e) => e.target.select()}
                     />
                     <button
                         type="button"
@@ -89,6 +90,7 @@ export const ItemRow: React.FC<ItemRowProps> = ({
                         className="input text-sm text-right pr-12"
                         value={item.prixUnitTTC || ''}
                         onChange={(e) => onUpdate(index, 'prixUnitTTC', e.target.value)}
+                        onFocus={(e) => e.target.select()}
                     />
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">
                         DH

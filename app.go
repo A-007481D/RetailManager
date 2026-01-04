@@ -62,6 +62,11 @@ func (a *App) CreateInvoice(req invoice.InvoiceCreateRequest) (*invoice.InvoiceR
 	return a.invoiceService.CreateInvoice(req)
 }
 
+// UpdateInvoice updates an existing invoice
+func (a *App) UpdateInvoice(id uint, req invoice.InvoiceCreateRequest) (*invoice.InvoiceResponse, error) {
+	return a.invoiceService.UpdateInvoice(id, req)
+}
+
 // GetAllInvoices returns all invoices
 func (a *App) GetAllInvoices() ([]invoice.InvoiceResponse, error) {
 	return a.invoiceService.GetAllInvoices()

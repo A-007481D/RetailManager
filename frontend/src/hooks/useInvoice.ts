@@ -90,6 +90,8 @@ export function useInvoice() {
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
 
+    const [editingId, setEditingId] = useState<number | null>(null);
+
     // Calculate totals whenever items change
     useEffect(() => {
         const totalTTC = formData.items.reduce((sum, item) => sum + item.totalTTC, 0);
@@ -194,6 +196,48 @@ export function useInvoice() {
         return null;
     }, [formData]);
 
+    const loadInvoice = useCallback((inv: any) => {
+        setEditingId(inv.id);
+        setFormData({
+            date: inv.date,
+            customFormattedId: inv.customFormattedId,
+            clientName: inv.clientName,
+            clientCity: inv.clientCity,
+            clientIce: inv.clientIce,
+            paymentMethod: inv.paymentMethod,
+            chequeInfo: inv.chequeInfo ? {
+                number: inv.chequeInfo.number,
+                bank: inv.chequeInfo.bank,
+                city: inv.chequeInfo.city,
+                reference: inv.chequeInfo.reference,
+            } : undefined,
+            effetInfo: inv.effetInfo ? {
+                city: inv.effetInfo.city,
+                dateEcheance: inv.effetInfo.dateEcheance,
+            } : undefined,
+            items: inv.items.map((item: any) => ({
+                productId: item.productId,
+                description: item.description,
+                quantity: item.quantity,
+                prixUnitTTC: item.prixUnitTTC,
+                totalTTC: item.totalTTC,
+            })),
+        });
+    }, []);
+
+    const resetForm = useCallback(() => {
+        setEditingId(null);
+        setFormData({
+            date: formatDate(new Date()),
+            customFormattedId: '',
+            clientName: '',
+            clientCity: '',
+            clientIce: '',
+            paymentMethod: 'ESPECE',
+            items: [emptyItem()],
+        });
+    }, []);
+
     const submitInvoice = useCallback(async () => {
         const validationError = validateForm();
         if (validationError) {
@@ -227,7 +271,15 @@ export function useInvoice() {
                 })),
             });
 
-            const result = await CreateInvoice(request);
+            let result;
+            if (editingId) {
+                // @ts-ignore - UpdateInvoice will be available after regeneration
+                result = await window.go.main.App.UpdateInvoice(editingId, request);
+                setSuccess(`Facture ${result.formattedId} mise à jour avec succès!`);
+            } else {
+                result = await CreateInvoice(request);
+                setSuccess(`Facture ${result.formattedId} créée avec succès!`);
+            }
 
             // Generate PDF
             const pdfPath = await GeneratePDF(result.id);
@@ -235,24 +287,14 @@ export function useInvoice() {
             // Open the PDF
             OpenPDF(pdfPath);
 
-            setSuccess(`Facture ${result.formattedId} créée avec succès!`);
-
             // Reset form
-            setFormData({
-                date: formatDate(new Date()),
-                customFormattedId: '',
-                clientName: '',
-                clientCity: '',
-                clientIce: '',
-                paymentMethod: 'ESPECE',
-                items: [emptyItem()],
-            });
+            resetForm();
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Erreur lors de la création de la facture');
+            setError(err instanceof Error ? err.message : 'Erreur lors de la création/modification de la facture');
         } finally {
             setIsSubmitting(false);
         }
-    }, [formData, validateForm]);
+    }, [formData, validateForm, editingId, resetForm]);
 
     return {
         formData,
@@ -260,6 +302,7 @@ export function useInvoice() {
         isSubmitting,
         error,
         success,
+        editingId,
         updateField,
         updateItem,
         addItem,
@@ -267,6 +310,8 @@ export function useInvoice() {
         updateChequeInfo,
         updateEffetInfo,
         submitInvoice,
+        loadInvoice,
+        resetForm,
         descriptionOptions: DESCRIPTION_OPTIONS,
     };
 }

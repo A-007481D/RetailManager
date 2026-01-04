@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useInventory } from '../hooks/useInventory';
 import { useInvoice } from '../hooks/useInvoice';
 import { useClients } from '../hooks/useClients';
@@ -17,7 +17,12 @@ import {
     PlusIcon
 } from './Icons';
 
-export const InvoiceForm: React.FC = () => {
+interface InvoiceFormProps {
+    invoiceToEdit?: any;
+    onEditComplete?: () => void;
+}
+
+export const InvoiceForm: React.FC<InvoiceFormProps> = ({ invoiceToEdit, onEditComplete }) => {
     const { products } = useInventory();
     const { clients } = useClients();
     const {
@@ -33,7 +38,34 @@ export const InvoiceForm: React.FC = () => {
         updateChequeInfo,
         updateEffetInfo,
         submitInvoice,
+        editingId,
+        loadInvoice,
+        resetForm,
     } = useInvoice();
+
+    // Load invoice when invoiceToEdit changes
+    useEffect(() => {
+        if (invoiceToEdit) {
+            loadInvoice(invoiceToEdit);
+        }
+    }, [invoiceToEdit, loadInvoice]);
+
+    // Handle reset (cancel edit)
+    const handleReset = () => {
+        resetForm();
+        if (onEditComplete) {
+            onEditComplete();
+        }
+    };
+
+    // Handle submit success (we can wrap submitInvoice or just rely on success state if we want to close)
+    // For now, let's just keep it simple. The user can click "Annuler" or navigate away.
+    // But better UX: clear edit mode on success?
+    // Let's modify the form submit handler to call onEditComplete if successful.
+    // Actually, useInvoice handles success state.
+    // Let's just wrap the reset button.
+
+
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-100 to-blue-50 py-8 px-4">
@@ -46,9 +78,11 @@ export const InvoiceForm: React.FC = () => {
                         </div>
                     </div>
                     <h1 className="text-3xl font-bold text-gray-800 mb-2">
-                        FactureApp
+                        {editingId ? 'Modifier la Facture' : 'FactureApp'}
                     </h1>
-                    <p className="text-gray-600">Système de Facturation Professionnel</p>
+                    <p className="text-gray-600">
+                        {editingId ? 'Modification en cours...' : 'Système de Facturation Professionnel'}
+                    </p>
                 </div>
 
                 {/* Alerts */}
@@ -254,7 +288,16 @@ export const InvoiceForm: React.FC = () => {
                     </div>
 
                     {/* Submit Button */}
-                    <div className="flex justify-center">
+                    <div className="flex justify-center gap-4">
+                        {editingId && (
+                            <button
+                                type="button"
+                                onClick={handleReset}
+                                className="px-6 py-3 rounded-lg text-gray-600 hover:bg-gray-100 font-medium transition-colors"
+                            >
+                                Annuler
+                            </button>
+                        )}
                         <button
                             type="submit"
                             disabled={isSubmitting}
@@ -264,12 +307,12 @@ export const InvoiceForm: React.FC = () => {
                             {isSubmitting ? (
                                 <>
                                     <SpinnerIcon className="w-5 h-5" />
-                                    Création en cours...
+                                    {editingId ? 'Mise à jour...' : 'Création en cours...'}
                                 </>
                             ) : (
                                 <>
                                     <DocumentCheckIcon className="w-5 h-5" />
-                                    Créer la Facture & Générer PDF
+                                    {editingId ? 'Mettre à jour la Facture' : 'Créer la Facture & Générer PDF'}
                                 </>
                             )}
                         </button>

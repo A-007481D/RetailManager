@@ -173,6 +173,7 @@ export const ProductList: React.FC = () => {
                                         className="input"
                                         value={formData.BuyingPrice}
                                         onChange={e => setFormData({ ...formData, BuyingPrice: parseFloat(e.target.value) || 0 })}
+                                        onFocus={(e) => e.target.select()}
                                         min="0"
                                         step="0.01"
                                     />
@@ -184,6 +185,7 @@ export const ProductList: React.FC = () => {
                                         className="input font-bold text-gray-800"
                                         value={formData.SellingPriceTTC}
                                         onChange={e => setFormData({ ...formData, SellingPriceTTC: parseFloat(e.target.value) || 0 })}
+                                        onFocus={(e) => e.target.select()}
                                         min="0"
                                         step="0.01"
                                         required
@@ -201,6 +203,7 @@ export const ProductList: React.FC = () => {
                                         className="input"
                                         value={formData.CurrentStock}
                                         onChange={e => setFormData({ ...formData, CurrentStock: parseInt(e.target.value) || 0 })}
+                                        onFocus={(e) => e.target.select()}
                                     />
                                 </div>
                                 <div>
@@ -211,6 +214,7 @@ export const ProductList: React.FC = () => {
                                             className="input pr-8"
                                             value={formData.MinStockLevel}
                                             onChange={e => setFormData({ ...formData, MinStockLevel: parseInt(e.target.value) || 0 })}
+                                            onFocus={(e) => e.target.select()}
                                             min="0"
                                         />
                                         <div className="absolute right-3 top-3 text-gray-400 pointer-events-none">

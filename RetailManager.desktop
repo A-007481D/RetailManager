@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=RetailManager
+Comment=Manage Invoices, Inventory, and Clients
+Exec=/home/malik/Desktop/Projects/SalahProject/build/bin/RetailManager
+Icon=applications-office
+Terminal=false
+Categories=Office;Finance;

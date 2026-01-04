@@ -7,6 +7,12 @@ import { ClientList } from './components/ClientList';
 
 function App() {
     const [activeTab, setActiveTab] = useState<'dashboard' | 'invoices' | 'inventory' | 'clients'>('dashboard');
+    const [invoiceToEdit, setInvoiceToEdit] = useState<any>(null);
+
+    const handleEditInvoice = (invoice: any) => {
+        setInvoiceToEdit(invoice);
+        setActiveTab('invoices');
+    };
 
     return (
         <div className="min-h-screen bg-gray-100 flex flex-col">
@@ -58,8 +64,8 @@ function App() {
 
             {/* Main Content */}
             <main className="flex-1 overflow-auto">
-                {activeTab === 'dashboard' && <Dashboard />}
-                {activeTab === 'invoices' && <InvoiceForm />}
+                {activeTab === 'dashboard' && <Dashboard onEditInvoice={handleEditInvoice} />}
+                {activeTab === 'invoices' && <InvoiceForm invoiceToEdit={invoiceToEdit} onEditComplete={() => setInvoiceToEdit(null)} />}
                 {activeTab === 'inventory' && <ProductList />}
                 {activeTab === 'clients' && <ClientList />}
             </main>

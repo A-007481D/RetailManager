@@ -149,6 +149,125 @@ func (s *Service) CreateInvoice(req InvoiceCreateRequest) (*InvoiceResponse, err
 	return s.toResponse(&invoice), nil
 }
 
+// UpdateInvoice updates an existing invoice and handles stock adjustments
+func (s *Service) UpdateInvoice(id uint, req InvoiceCreateRequest) (*InvoiceResponse, error) {
+	db := database.GetDB()
+
+	// Start transaction
+	tx := db.Begin()
+	if tx.Error != nil {
+		return nil, tx.Error
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
+	// 1. Get existing invoice with items
+	var invoice Invoice
+	if err := tx.Preload("Items").First(&invoice, id).Error; err != nil {
+		tx.Rollback()
+		return nil, fmt.Errorf("invoice not found: %w", err)
+	}
+
+	// 2. Revert stock for OLD items
+	for _, item := range invoice.Items {
+		if err := s.inventoryService.IncreaseStock(tx, item.ProductID, int(item.Quantity)); err != nil {
+			tx.Rollback()
+			return nil, fmt.Errorf("failed to revert stock for item %s: %w", item.Description, err)
+		}
+	}
+
+	// 3. Delete OLD items
+	if err := tx.Where("invoice_id = ?", id).Delete(&InvoiceItem{}).Error; err != nil {
+		tx.Rollback()
+		return nil, fmt.Errorf("failed to delete old items: %w", err)
+	}
+
+	// 4. Process NEW items (Calculate totals and Decrease Stock)
+	var totalTTC float64
+	newItems := make([]InvoiceItem, len(req.Items))
+	for i, item := range req.Items {
+		itemTotal := item.Quantity * item.PrixUnitTTC
+		newItems[i] = InvoiceItem{
+			InvoiceID:   id, // Link to existing invoice
+			ProductID:   item.ProductID,
+			Description: item.Description,
+			Quantity:    item.Quantity,
+			PrixUnitTTC: item.PrixUnitTTC,
+			TotalTTC:    itemTotal,
+		}
+		totalTTC += itemTotal
+
+		// Decrease stock for NEW quantity
+		if err := s.inventoryService.DecreaseStock(tx, item.ProductID, int(item.Quantity)); err != nil {
+			tx.Rollback()
+			return nil, fmt.Errorf("insufficient stock for new item %s: %w", item.Description, err)
+		}
+	}
+
+	// 5. Recalculate Invoice Totals
+	totalHT := totalTTC / 1.20
+	totalTVA := totalTTC - totalHT
+
+	totalHT = math.Round(totalHT*100) / 100
+	totalTVA = math.Round(totalTVA*100) / 100
+	totalTTC = math.Round(totalTTC*100) / 100
+	totalInWords := s.ConvertToWords(totalTTC)
+
+	// 6. Update Invoice Fields
+	invoice.ClientName = req.ClientName
+	invoice.ClientCity = req.ClientCity
+	invoice.ClientICE = req.ClientICE
+	invoice.Date, _ = time.Parse("02-01-2006", req.Date) // Assuming validated in frontend/handler
+	invoice.TotalHT = totalHT
+	invoice.TotalTVA = totalTVA
+	invoice.TotalTTC = totalTTC
+	invoice.TotalInWords = totalInWords
+	invoice.PaymentMethod = req.PaymentMethod
+	invoice.Items = newItems // GORM will create these
+
+	if req.CustomFormattedID != "" {
+		invoice.CustomFormattedID = req.CustomFormattedID
+	}
+
+	// Update payment details
+	if req.ChequeInfo != nil && req.PaymentMethod == "CHEQUE" {
+		invoice.ChequeNumber = req.ChequeInfo.Number
+		invoice.ChequeBank = req.ChequeInfo.Bank
+		invoice.ChequeCity = req.ChequeInfo.City
+		invoice.ChequeReference = req.ChequeInfo.Reference
+	} else {
+		// Clear if changed
+		invoice.ChequeNumber = ""
+		invoice.ChequeBank = ""
+		invoice.ChequeCity = ""
+		invoice.ChequeReference = ""
+	}
+
+	if req.EffetInfo != nil && req.PaymentMethod == "EFFET" {
+		invoice.EffetCity = req.EffetInfo.City
+		invoice.EffetDateEcheance = req.EffetInfo.DateEcheance
+	} else {
+		invoice.EffetCity = ""
+		invoice.EffetDateEcheance = ""
+	}
+
+	// 7. Save Invoice
+	if err := tx.Save(&invoice).Error; err != nil {
+		tx.Rollback()
+		return nil, fmt.Errorf("failed to update invoice: %w", err)
+	}
+
+	// Commit
+	if err := tx.Commit().Error; err != nil {
+		return nil, fmt.Errorf("transaction commit failed: %w", err)
+	}
+
+	return s.toResponse(&invoice), nil
+}
+
 // GetAllInvoices returns all invoices
 func (s *Service) GetAllInvoices() ([]InvoiceResponse, error) {
 	db := database.GetDB()

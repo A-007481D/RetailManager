@@ -37,6 +37,21 @@ func (s *Service) DecreaseStock(tx *gorm.DB, productID uint, quantity int) error
 	return nil
 }
 
+// IncreaseStock increments the stock of a product within a transaction (used for cancellations/edits)
+func (s *Service) IncreaseStock(tx *gorm.DB, productID uint, quantity int) error {
+	var product Product
+	if err := tx.First(&product, productID).Error; err != nil {
+		return fmt.Errorf("product not found: %w", err)
+	}
+
+	product.CurrentStock += quantity
+	if err := tx.Save(&product).Error; err != nil {
+		return fmt.Errorf("failed to update stock: %w", err)
+	}
+
+	return nil
+}
+
 // GetAllProducts returns all products
 func (s *Service) GetAllProducts() ([]Product, error) {
 	db := database.GetDB()

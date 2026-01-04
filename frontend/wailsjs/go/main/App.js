@@ -66,6 +66,10 @@ export function UpdateClient(arg1) {
   return window['go']['main']['App']['UpdateClient'](arg1);
 }
 
+export function UpdateInvoice(arg1, arg2) {
+  return window['go']['main']['App']['UpdateInvoice'](arg1, arg2);
+}
+
 export function UpdateProduct(arg1) {
   return window['go']['main']['App']['UpdateProduct'](arg1);
 }

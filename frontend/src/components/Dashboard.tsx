@@ -3,7 +3,11 @@ import { GetDashboardStats } from '../../wailsjs/go/main/App';
 import { main, invoice, inventory } from '../../wailsjs/go/models';
 import { MoneyIcon, BoxIcon, DocumentCheckIcon, WarningIcon, InvoiceIcon } from './Icons';
 
-export const Dashboard: React.FC = () => {
+interface DashboardProps {
+    onEditInvoice?: (invoice: any) => void;
+}
+
+export const Dashboard: React.FC<DashboardProps> = ({ onEditInvoice }) => {
     const [stats, setStats] = useState<main.DashboardStats | null>(null);
     const [loading, setLoading] = useState(true);
 
@@ -103,6 +107,7 @@ export const Dashboard: React.FC = () => {
                                 <th className="px-6 py-3 text-left">Client</th>
                                 <th className="px-6 py-3 text-right">Montant TTC</th>
                                 <th className="px-6 py-3 text-center">Paiement</th>
+                                <th className="px-6 py-3 text-center">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
@@ -125,11 +130,19 @@ export const Dashboard: React.FC = () => {
                                             {inv.paymentMethod}
                                         </span>
                                     </td>
+                                    <td className="px-6 py-4 text-center">
+                                        <button
+                                            onClick={() => onEditInvoice && onEditInvoice(inv)}
+                                            className="text-blue-600 hover:text-blue-800 font-medium text-sm"
+                                        >
+                                            Modifier
+                                        </button>
+                                    </td>
                                 </tr>
                             ))}
                             {(!stats.InvoiceStats?.RecentInvoices || stats.InvoiceStats.RecentInvoices.length === 0) && (
                                 <tr>
-                                    <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
+                                    <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
                                         Aucune facture récente
                                     </td>
                                 </tr>
