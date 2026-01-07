@@ -3,9 +3,15 @@ package inventory
 import (
 	"factureapp/backend/database"
 	"fmt"
+	"strings"
 
 	"gorm.io/gorm"
 )
+
+// contains checks if a string contains a substring (case-insensitive)
+func contains(s, substr string) bool {
+	return strings.Contains(strings.ToLower(s), strings.ToLower(substr))
+}
 
 type Service struct{}
 
@@ -22,16 +28,16 @@ func (s *Service) Migrate() error {
 func (s *Service) DecreaseStock(tx *gorm.DB, productID uint, quantity int) error {
 	var product Product
 	if err := tx.First(&product, productID).Error; err != nil {
-		return fmt.Errorf("product not found: %w", err)
+		return fmt.Errorf("produit introuvable: %w", err)
 	}
 
 	if product.CurrentStock < quantity {
-		return fmt.Errorf("insufficient stock for product %s (requested: %d, available: %d)", product.Name, quantity, product.CurrentStock)
+		return fmt.Errorf("stock insuffisant pour '%s' (demandé: %d, disponible: %d)", product.Name, quantity, product.CurrentStock)
 	}
 
 	product.CurrentStock -= quantity
 	if err := tx.Save(&product).Error; err != nil {
-		return fmt.Errorf("failed to update stock: %w", err)
+		return fmt.Errorf("échec de la mise à jour du stock: %w", err)
 	}
 
 	return nil
@@ -64,18 +70,42 @@ func (s *Service) GetAllProducts() ([]Product, error) {
 
 // CreateProduct creates a new product
 func (s *Service) CreateProduct(product Product) (*Product, error) {
+	// Pre-validation
+	if len(product.Reference) == 0 {
+		return nil, fmt.Errorf("la référence est obligatoire")
+	}
+	if len(product.Name) == 0 {
+		return nil, fmt.Errorf("le nom du produit est obligatoire")
+	}
+	if product.SellingPriceTTC < 0 {
+		return nil, fmt.Errorf("le prix de vente ne peut pas être négatif")
+	}
+
 	db := database.GetDB()
 	if err := db.Create(&product).Error; err != nil {
-		return nil, err
+		// Check for unique constraint violation (SQLite)
+		errMsg := err.Error()
+		if contains(errMsg, "UNIQUE constraint failed") || contains(errMsg, "duplicate key") {
+			return nil, fmt.Errorf("un produit avec la référence '%s' existe déjà", product.Reference)
+		}
+		return nil, fmt.Errorf("échec de la création du produit: %w", err)
 	}
 	return &product, nil
 }
 
 // UpdateProduct updates an existing product
 func (s *Service) UpdateProduct(product Product) error {
+	// Pre-validation
+	if len(product.Name) == 0 {
+		return fmt.Errorf("le nom du produit est obligatoire")
+	}
+	if product.SellingPriceTTC < 0 {
+		return fmt.Errorf("le prix de vente ne peut pas être négatif")
+	}
+
 	db := database.GetDB()
 	if err := db.Save(&product).Error; err != nil {
-		return fmt.Errorf("failed to update product: %w", err)
+		return fmt.Errorf("échec de la mise à jour du produit: %w", err)
 	}
 	return nil
 }
@@ -83,9 +113,20 @@ func (s *Service) UpdateProduct(product Product) error {
 // DeleteProduct soft deletes a product
 func (s *Service) DeleteProduct(id uint) error {
 	db := database.GetDB()
+
+	// Check if product is used in any invoices
+	var count int64
+	if err := db.Table("invoice_items").Where("product_id = ?", id).Count(&count).Error; err != nil {
+		return fmt.Errorf("échec de la vérification d'utilisation: %w", err)
+	}
+
+	if count > 0 {
+		return fmt.Errorf("impossible de supprimer ce produit car il est utilisé dans %d facture(s)", count)
+	}
+
 	// GORM performs a soft delete automatically because Product embeds gorm.Model
 	if err := db.Delete(&Product{}, id).Error; err != nil {
-		return fmt.Errorf("failed to delete product: %w", err)
+		return fmt.Errorf("échec de la suppression du produit: %w", err)
 	}
 	return nil
 }

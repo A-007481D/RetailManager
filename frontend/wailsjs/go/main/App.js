@@ -58,8 +58,16 @@ export function GetTotalInWords(arg1) {
   return window['go']['main']['App']['GetTotalInWords'](arg1);
 }
 
+export function GetVersion() {
+  return window['go']['main']['App']['GetVersion']();
+}
+
 export function OpenPDF(arg1) {
   return window['go']['main']['App']['OpenPDF'](arg1);
+}
+
+export function PrintPDF(arg1) {
+  return window['go']['main']['App']['PrintPDF'](arg1);
 }
 
 export function SearchClients(arg1) {

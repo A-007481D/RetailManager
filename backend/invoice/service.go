@@ -46,16 +46,44 @@ func (s *Service) CreateInvoice(req InvoiceCreateRequest) (*InvoiceResponse, err
 	// Parse date
 	date, err := time.Parse("02-01-2006", req.Date)
 	if err != nil {
-		return nil, fmt.Errorf("invalid date format, expected DD-MM-YYYY: %w", err)
+		return nil, fmt.Errorf("format de date invalide, JJ-MM-AAAA attendu: %w", err)
 	}
 
 	// Validate ICE (15 characters)
 	if len(req.ClientICE) != 15 {
-		return nil, fmt.Errorf("ICE must be exactly 15 characters, got %d", len(req.ClientICE))
+		return nil, fmt.Errorf("l'ICE doit contenir exactement 15 chiffres, vous avez fourni %d", len(req.ClientICE))
+	}
+
+	// Validate items
+	if len(req.Items) == 0 {
+		return nil, fmt.Errorf("la facture doit contenir au moins un article")
+	}
+
+	for i, item := range req.Items {
+		if item.ProductID == 0 {
+			return nil, fmt.Errorf("article %d: aucun produit sélectionné", i+1)
+		}
+		if item.Quantity <= 0 {
+			return nil, fmt.Errorf("article %d: la quantité doit être supérieure à 0", i+1)
+		}
+		if item.Quantity > 100000 {
+			return nil, fmt.Errorf("article %d: quantité excessive (%.0f). Maximum: 100,000", i+1, item.Quantity)
+		}
+		if item.PrixUnitTTC <= 0 {
+			return nil, fmt.Errorf("article %d: le prix unitaire doit être supérieur à 0", i+1)
+		}
+		if len(strings.TrimSpace(item.Description)) == 0 {
+			return nil, fmt.Errorf("article %d: la description est obligatoire", i+1)
+		}
 	}
 
 	// Get year from the invoice date (not system date)
 	invoiceYear := date.Year()
+
+	// Validate year range
+	if invoiceYear < 1900 || invoiceYear > 2100 {
+		return nil, fmt.Errorf("année invalide: %d (doit être entre 1900 et 2100)", invoiceYear)
+	}
 
 	// Calculate TTC from items
 	var totalTTC float64
@@ -66,7 +94,7 @@ func (s *Service) CreateInvoice(req InvoiceCreateRequest) (*InvoiceResponse, err
 		var product inventory.Product
 		if err := tx.First(&product, item.ProductID).Error; err != nil {
 			tx.Rollback()
-			return nil, fmt.Errorf("product not found: %w", err)
+			return nil, fmt.Errorf("produit introuvable (ID: %d): %w", item.ProductID, err)
 		}
 
 		items[i] = InvoiceItem{
@@ -83,7 +111,7 @@ func (s *Service) CreateInvoice(req InvoiceCreateRequest) (*InvoiceResponse, err
 		// Decrement stock
 		if err := s.inventoryService.DecreaseStock(tx, item.ProductID, int(item.Quantity)); err != nil {
 			tx.Rollback()
-			return nil, fmt.Errorf("stock error for item %s: %w", item.Description, err)
+			return nil, err // Error already in French from inventory service
 		}
 
 	}
@@ -147,12 +175,12 @@ func (s *Service) CreateInvoice(req InvoiceCreateRequest) (*InvoiceResponse, err
 	// Save to database
 	if err := tx.Create(&invoice).Error; err != nil {
 		tx.Rollback()
-		return nil, fmt.Errorf("failed to create invoice: %w", err)
+		return nil, fmt.Errorf("échec de la création de la facture: %w", err)
 	}
 
 	// Commit transaction
 	if err := tx.Commit().Error; err != nil {
-		return nil, fmt.Errorf("failed to commit transaction: %w", err)
+		return nil, fmt.Errorf("échec de la validation de la transaction: %w", err)
 	}
 
 	return s.toResponse(&invoice), nil
@@ -177,14 +205,14 @@ func (s *Service) UpdateInvoice(id uint, req InvoiceCreateRequest) (*InvoiceResp
 	var invoice Invoice
 	if err := tx.Preload("Items").First(&invoice, id).Error; err != nil {
 		tx.Rollback()
-		return nil, fmt.Errorf("invoice not found: %w", err)
+		return nil, fmt.Errorf("facture introuvable: %w", err)
 	}
 
 	// 2. Revert stock for OLD items
 	for _, item := range invoice.Items {
 		if err := s.inventoryService.IncreaseStock(tx, item.ProductID, int(item.Quantity)); err != nil {
 			tx.Rollback()
-			return nil, fmt.Errorf("failed to revert stock for item %s: %w", item.Description, err)
+			return nil, fmt.Errorf("échec de la restauration du stock pour l'article %s: %w", item.Description, err)
 		}
 	}
 
@@ -241,7 +269,7 @@ func (s *Service) UpdateInvoice(id uint, req InvoiceCreateRequest) (*InvoiceResp
 		var product inventory.Product
 		if err := tx.First(&product, itemReq.ProductID).Error; err != nil {
 			tx.Rollback()
-			return nil, fmt.Errorf("product not found: %w", err)
+			return nil, fmt.Errorf("produit introuvable: %w", err)
 		}
 
 		newItems = append(newItems, InvoiceItem{
@@ -266,12 +294,12 @@ func (s *Service) UpdateInvoice(id uint, req InvoiceCreateRequest) (*InvoiceResp
 	// Save updated invoice
 	if err := tx.Save(&invoice).Error; err != nil {
 		tx.Rollback()
-		return nil, fmt.Errorf("failed to update invoice: %w", err)
+		return nil, fmt.Errorf("échec de la mise à jour de la facture: %w", err)
 	}
 
 	// Commit
 	if err := tx.Commit().Error; err != nil {
-		return nil, fmt.Errorf("transaction commit failed: %w", err)
+		return nil, fmt.Errorf("échec de la validation de la transaction: %w", err)
 	}
 
 	return s.toResponse(&invoice), nil

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { GetDashboardStats, GetAvailableYears } from '../../wailsjs/go/main/App';
+import { GetDashboardStats, GetAvailableYears, GeneratePDF, OpenPDF, PrintPDF, GetVersion } from '../../wailsjs/go/main/App';
 import { main, invoice } from '../../wailsjs/go/models';
 import {
     TrendingUp as TrendingUpIcon,
@@ -7,14 +7,17 @@ import {
     Package as PackageIcon,
     AlertCircle as AlertIcon,
     DollarSign as MoneyIcon,
-    Calendar as CalendarIcon
+    Calendar as CalendarIcon,
+    Eye as EyeIcon,
+    Printer as PrinterIcon
 } from 'lucide-react';
-import { MoneyIcon as MoneyIconLegacy, BoxIcon, DocumentCheckIcon, WarningIcon, InvoiceIcon } from './Icons';
+import { MoneyIcon as MoneyIconLegacy, BoxIcon, DocumentCheckIcon, WarningIcon, InvoiceIcon, PlusIcon, EditIcon } from './Icons';
 import { RevenueChart } from './RevenueChart';
 import { TopProductsChart } from './TopProductsChart';
 import { TopClientsList } from './TopClientsList';
 
 interface DashboardProps {
+    onNewInvoice?: () => void;
     onEditInvoice?: (invoice: any) => void;
 }
 
@@ -30,11 +33,14 @@ interface DashboardProps {
 //     };
 // }
 
-export const Dashboard: React.FC<DashboardProps> = ({ onEditInvoice }) => {
-    const [stats, setStats] = useState<main.DashboardStats | null>(null);
+export const Dashboard: React.FC<DashboardProps> = ({ onNewInvoice, onEditInvoice }) => {
+    const [stats, setStats] = useState<any>(null);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [pdfError, setPdfError] = useState<string | null>(null);
     const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
     const [availableYears, setAvailableYears] = useState<number[]>([]);
+    const [version, setVersion] = useState<string>('');
 
     const loadStats = async () => {
         try {
@@ -58,8 +64,18 @@ export const Dashboard: React.FC<DashboardProps> = ({ onEditInvoice }) => {
         }
     };
 
+    const loadVersion = async () => {
+        try {
+            const ver = await GetVersion();
+            setVersion(ver);
+        } catch (error) {
+            console.error('Failed to load version:', error);
+        }
+    };
+
     useEffect(() => {
         loadYears();
+        loadVersion();
     }, []);
 
     useEffect(() => {
@@ -94,6 +110,24 @@ export const Dashboard: React.FC<DashboardProps> = ({ onEditInvoice }) => {
                     </select>
                 </div>
             </div>
+
+            {/* PDF Error Alert */}
+            {pdfError && (
+                <div className="mb-4 p-4 bg-red-100 border border-red-300 text-red-700 rounded-lg flex items-start gap-3">
+                    <WarningIcon className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                        <p className="font-medium">Erreur PDF</p>
+                        <p className="text-sm">{pdfError}</p>
+                    </div>
+                    <button
+                        onClick={() => setPdfError(null)}
+                        className="text-red-700 hover:text-red-900 font-bold text-lg leading-none"
+                        aria-label="Fermer"
+                    >
+                        ×
+                    </button>
+                </div>
+            )}
 
             {/* Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -223,12 +257,44 @@ export const Dashboard: React.FC<DashboardProps> = ({ onEditInvoice }) => {
                                             </span>
                                         </td>
                                         <td className="px-6 py-4 text-center">
-                                            <button
-                                                onClick={() => onEditInvoice && onEditInvoice(inv)}
-                                                className="text-blue-600 hover:text-blue-800 font-medium text-sm"
-                                            >
-                                                Modifier
-                                            </button>
+                                            <div className="flex items-center justify-center gap-2">
+                                                <button
+                                                    onClick={async () => {
+                                                        try {
+                                                            setPdfError(null);
+                                                            const pdfPath = await GeneratePDF(inv.id);
+                                                            await OpenPDF(pdfPath);
+                                                        } catch (err: any) {
+                                                            setPdfError(err?.message || "Erreur lors de l'ouverture du PDF");
+                                                        }
+                                                    }}
+                                                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                                    title="Voir PDF"
+                                                >
+                                                    <EyeIcon className="w-4 h-4" />
+                                                </button>
+                                                <button
+                                                    onClick={async () => {
+                                                        try {
+                                                            setPdfError(null);
+                                                            const pdfPath = await GeneratePDF(inv.id);
+                                                            await PrintPDF(pdfPath);
+                                                        } catch (err: any) {
+                                                            setPdfError(err?.message || "Erreur lors de l'impression du PDF");
+                                                        }
+                                                    }}
+                                                    className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                                                    title="Imprimer"
+                                                >
+                                                    <PrinterIcon className="w-4 h-4" />
+                                                </button>
+                                                <button
+                                                    onClick={() => onEditInvoice && onEditInvoice(inv)}
+                                                    className="text-blue-600 hover:text-blue-800 font-medium text-sm"
+                                                >
+                                                    Modifier
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))}
@@ -243,6 +309,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ onEditInvoice }) => {
                         </table>
                     </div>
                 </div>
+            </div>
+
+            {/* Footer with Version */}
+            <div className="mt-8 pt-4 border-t border-gray-200 text-center">
+                <p className="text-sm text-gray-500">
+                    RetailManager v{version} · © 2026 A-007481D
+                </p>
             </div>
         </div>
     );

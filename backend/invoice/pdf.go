@@ -38,7 +38,7 @@ func (s *Service) GeneratePDF(invoiceID uint) (string, error) {
 	// Get invoice data
 	invoice, err := s.GetInvoiceByID(invoiceID)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("impossible de récupérer la facture: %w", err)
 	}
 
 	// Configure Maroto
@@ -93,7 +93,7 @@ func (s *Service) GeneratePDF(invoiceID uint) (string, error) {
 	// Generate PDF
 	doc, err := m.Generate()
 	if err != nil {
-		return "", fmt.Errorf("failed to generate PDF: %w", err)
+		return "", fmt.Errorf("échec de la génération du PDF: %w", err)
 	}
 
 	// Save to file
@@ -103,7 +103,7 @@ func (s *Service) GeneratePDF(invoiceID uint) (string, error) {
 	}
 	pdfDir := filepath.Join(outputDir, "FactureApp", "pdfs")
 	if err := os.MkdirAll(pdfDir, 0755); err != nil {
-		return "", err
+		return "", fmt.Errorf("impossible de créer le dossier PDF (%s): vérifiez les permissions ou l'espace disque", pdfDir)
 	}
 
 	// Create safe filename
@@ -111,7 +111,7 @@ func (s *Service) GeneratePDF(invoiceID uint) (string, error) {
 	pdfPath := filepath.Join(pdfDir, safeName)
 
 	if err := doc.Save(pdfPath); err != nil {
-		return "", fmt.Errorf("failed to save PDF: %w", err)
+		return "", fmt.Errorf("impossible de sauvegarder le PDF (%s): vérifiez les permissions et l'espace disque disponible", pdfPath)
 	}
 
 	return pdfPath, nil

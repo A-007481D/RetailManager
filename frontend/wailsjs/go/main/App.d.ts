@@ -33,7 +33,11 @@ export function GetInvoiceByID(arg1:number):Promise<invoice.InvoiceResponse>;
 
 export function GetTotalInWords(arg1:number):Promise<string>;
 
+export function GetVersion():Promise<string>;
+
 export function OpenPDF(arg1:string):Promise<void>;
+
+export function PrintPDF(arg1:string):Promise<void>;
 
 export function SearchClients(arg1:string):Promise<Array<client.Client>>;
 

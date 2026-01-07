@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { CreateInvoice, CalculateTotals, GeneratePDF, OpenPDF } from '../../wailsjs/go/main/App';
 import { invoice } from '../../wailsjs/go/models';
 
@@ -90,8 +90,26 @@ export function useInvoice() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
+    const successTimeoutRef = useRef<number | null>(null);
 
     const [editingId, setEditingId] = useState<number | null>(null);
+
+    // Success messages auto-clear after 3 seconds
+    useEffect(() => {
+        if (success) {
+            if (successTimeoutRef.current) {
+                clearTimeout(successTimeoutRef.current);
+            }
+            successTimeoutRef.current = setTimeout(() => {
+                setSuccess(null);
+            }, 3000);
+        }
+        return () => {
+            if (successTimeoutRef.current) {
+                clearTimeout(successTimeoutRef.current);
+            }
+        };
+    }, [success]);
 
     // Calculate totals whenever items change
     useEffect(() => {
@@ -287,8 +305,11 @@ export function useInvoice() {
 
             // Reset form
             resetForm();
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'Erreur lors de la création/modification de la facture');
+        } catch (err: any) {
+            // Extract error message - backend errors come in err.message or just err as string
+            const errorMessage = err?.message || err?.toString() || String(err);
+            setError(errorMessage);
+            console.error('Invoice creation error:', err);
         } finally {
             setIsSubmitting(false);
         }

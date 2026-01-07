@@ -3,14 +3,17 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
+	"os/exec"
+	goruntime "runtime"
 
 	"factureapp/backend/client"
 	"factureapp/backend/database"
 	"factureapp/backend/inventory"
 	"factureapp/backend/invoice"
-
-	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
+
+const AppVersion = "1.1.0"
 
 // App struct
 type App struct {
@@ -91,9 +94,67 @@ func (a *App) GeneratePDF(invoiceID uint) (string, error) {
 	return pdfPath, nil
 }
 
+// GetVersion returns the application version
+func (a *App) GetVersion() string {
+	return AppVersion
+}
+
 // OpenPDF opens the generated PDF in the default system viewer
-func (a *App) OpenPDF(pdfPath string) {
-	runtime.BrowserOpenURL(a.ctx, "file://"+pdfPath)
+func (a *App) OpenPDF(pdfPath string) error {
+	// Check if file exists
+	if _, err := os.Stat(pdfPath); os.IsNotExist(err) {
+		return fmt.Errorf("le fichier PDF n'existe pas: %s", pdfPath)
+	}
+
+	var cmd *exec.Cmd
+	switch goruntime.GOOS {
+	case "windows":
+		// Windows: use cmd /c start
+		cmd = exec.Command("cmd", "/c", "start", "", pdfPath)
+	case "darwin":
+		// macOS: use open
+		cmd = exec.Command("open", pdfPath)
+	default:
+		// Linux: use xdg-open
+		cmd = exec.Command("xdg-open", pdfPath)
+	}
+
+	if err := cmd.Start(); err != nil {
+		return fmt.Errorf("impossible d'ouvrir le PDF: %w", err)
+	}
+
+	return nil
+}
+
+// PrintPDF sends the PDF directly to the default printer
+func (a *App) PrintPDF(pdfPath string) error {
+	// Check if file exists
+	if _, err := os.Stat(pdfPath); os.IsNotExist(err) {
+		return fmt.Errorf("le fichier PDF n'existe pas: %s", pdfPath)
+	}
+
+	var cmd *exec.Cmd
+	switch goruntime.GOOS {
+	case "windows":
+		// Windows: use PowerShell Start-Process with -Verb Print
+		cmd = exec.Command("powershell", "-Command", fmt.Sprintf(`Start-Process -FilePath "%s" -Verb Print`, pdfPath))
+	case "darwin":
+		// macOS: use lpr command
+		cmd = exec.Command("lpr", pdfPath)
+	default:
+		// Linux: use lpr command (requires CUPS)
+		cmd = exec.Command("lpr", pdfPath)
+	}
+
+	if err := cmd.Run(); err != nil {
+		// Provide helpful error message for Linux without printer
+		if goruntime.GOOS == "linux" {
+			return fmt.Errorf("impossible d'imprimer: vérifiez qu'une imprimante est configurée (CUPS). Sinon, utilisez 'Voir PDF' puis imprimez depuis le lecteur PDF")
+		}
+		return fmt.Errorf("impossible d'imprimer le PDF: %w", err)
+	}
+
+	return nil
 }
 
 // CalculateTotals calculates totals from TTC for live preview

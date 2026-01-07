@@ -5,7 +5,7 @@ import { BoxIcon, PlusIcon, EditIcon, CheckCircleIcon, WarningIcon } from './Ico
 import { ConfirmModal } from './ConfirmModal';
 
 export const ProductList: React.FC = () => {
-    const { products, loading, error, addProduct, updateProduct, deleteProduct } = useInventory();
+    const { products, loading, error, success, addProduct, updateProduct, deleteProduct, clearError } = useInventory();
     const [isAdding, setIsAdding] = useState(false);
     const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
@@ -73,7 +73,6 @@ export const ProductList: React.FC = () => {
     };
 
     if (loading && products.length === 0) return <div>Chargement...</div>;
-    if (error) return <div className="text-red-500">{error}</div>;
 
     return (
         <div className="p-6">
@@ -84,6 +83,35 @@ export const ProductList: React.FC = () => {
                 onConfirm={handleConfirmDelete}
                 onCancel={() => setIsDeleteModalOpen(false)}
             />
+
+            {/* Error Alert */}
+            {error && (
+                <div className="mb-4 p-4 bg-red-100 border border-red-300 text-red-700 rounded-lg flex items-start gap-3">
+                    <WarningIcon className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                        <p className="font-medium">Erreur</p>
+                        <p className="text-sm">{error}</p>
+                    </div>
+                    <button
+                        onClick={clearError}
+                        className="text-red-700 hover:text-red-900 font-bold text-lg leading-none"
+                        aria-label="Fermer"
+                    >
+                        ×
+                    </button>
+                </div>
+            )}
+
+            {/* Success Alert */}
+            {success && (
+                <div className="mb-4 p-4 bg-green-100 border border-green-300 text-green-700 rounded-lg flex items-start gap-3">
+                    <CheckCircleIcon className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                        <p className="font-medium">Success</p>
+                        <p className="text-sm">{success}</p>
+                    </div>
+                </div>
+            )}
 
             <div className="flex justify-between items-center mb-6">
                 <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
