@@ -36,6 +36,10 @@ build: install-deps ## Build the application
 	@echo "Building $(BINARY_NAME)..."
 	@$(WAILS_CMD) build -tags webkit2_41 -o $(BINARY_NAME)
 
+build-windows: install-deps ## Build Windows installer (.exe with NSIS)
+	@echo "Building Windows installer..."
+	@$(WAILS_CMD) build -platform windows/amd64 -nsis -o $(BINARY_NAME)
+
 run: ## Run the built application
 	@echo "Running $(BINARY_NAME)..."
 	@if [ -f "$(BUILD_DIR)/$(BINARY_NAME)" ]; then \
