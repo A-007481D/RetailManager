@@ -100,7 +100,9 @@ SectionEnd
 Section "uninstall"
     !insertmacro wails.setShellContext
 
-    RMDir /r "$AppData\${PRODUCT_EXECUTABLE}" # Remove the WebView2 DataPath
+    # IMPORTANT: Only remove WebView2 cache, NOT user data!
+    # User data (invoices.db) is stored in $AppData\FactureApp and must be preserved
+    RMDir /r "$AppData\${PRODUCT_EXECUTABLE}\EBWebView"
 
     RMDir /r $INSTDIR
 
