@@ -274,6 +274,15 @@ h1 {
     border-bottom: none;
 }
 
+.release-notes {
+    color: var(--text-muted);
+    font-size: 0.95rem;
+}
+
+.release-notes p {
+    padding: 0.3rem 0;
+}
+
 /* Footer */
 footer {
     text-align: center;

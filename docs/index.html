@@ -16,22 +16,21 @@
 <body>
     <div class="hero">
         <div class="hero-content">
-            <div class="badge">v1.1.0 • Windows</div>
+            <div class="badge" id="version-badge">Chargement...</div>
             <h1>RetailManager</h1>
             <p class="tagline">Gestion professionnelle de factures & inventaire pour votre entreprise</p>
 
             <div class="download-section">
-                <a href="https://github.com/A-007481D/RetailManager/releases/latest/download/RetailManager-amd64-installer.exe"
-                    class="download-btn">
+                <a href="https://github.com/A-007481D/RetailManager/releases" id="download-btn" class="download-btn">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                         <polyline points="7 10 12 15 17 10"></polyline>
                         <line x1="12" y1="15" x2="12" y2="3"></line>
                     </svg>
-                    Télécharger pour Windows
+                    <span id="download-text">Télécharger pour Windows</span>
                 </a>
-                <span class="file-info">RetailManager-amd64-installer.exe • ~8 MB</span>
+                <span class="file-info" id="file-info">Chargement des informations...</span>
             </div>
 
             <a href="https://github.com/A-007481D/RetailManager/releases" class="releases-link">
@@ -116,7 +115,11 @@
             </div>
         </div>
         <div class="data-safe">
-            <span>🔒</span>
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            </svg>
             <p><strong>Vos données sont en sécurité.</strong> Les factures, clients et produits sont stockés séparément
                 et ne sont jamais supprimés lors des mises à jour.</p>
         </div>
@@ -124,18 +127,8 @@
 
     <section class="changelog">
         <h2>Dernières Nouveautés</h2>
-        <div class="version-card">
-            <div class="version-header">
-                <span class="version-tag">v1.1.0</span>
-                <span class="version-date">Janvier 2026</span>
-            </div>
-            <ul>
-                <li>✅ Messages d'erreur en français</li>
-                <li>✅ Protection contre la suppression accidentelle</li>
-                <li>✅ Validation avancée des factures</li>
-                <li>✅ Meilleure gestion PDF</li>
-                <li>✅ Interface Windows améliorée</li>
-            </ul>
+        <div class="version-card" id="changelog-container">
+            <p style="color: var(--text-muted);">Chargement...</p>
         </div>
     </section>
 
@@ -145,6 +138,88 @@
             <a href="https://github.com/A-007481D/RetailManager">GitHub</a>
         </p>
     </footer>
+
+    <script>
+        const GITHUB_API = 'https://api.github.com/repos/A-007481D/RetailManager/releases/latest';
+
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+        }
+
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            const months = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+                'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+            return `${months[date.getMonth()]} ${date.getFullYear()}`;
+        }
+
+        async function loadLatestRelease() {
+            try {
+                const response = await fetch(GITHUB_API);
+
+                if (!response.ok) {
+                    throw new Error('No releases found');
+                }
+
+                const release = await response.json();
+
+                // Find the Windows exe asset
+                const asset = release.assets.find(a => a.name.endsWith('.exe'));
+
+                if (asset) {
+                    // Update download button
+                    document.getElementById('download-btn').href = asset.browser_download_url;
+                    document.getElementById('file-info').textContent =
+                        `${asset.name} • ${formatBytes(asset.size)}`;
+                } else {
+                    document.getElementById('file-info').textContent = 'Téléchargement bientôt disponible';
+                }
+
+                // Update version badge
+                document.getElementById('version-badge').textContent = `${release.tag_name} • Windows`;
+
+                // Update changelog
+                const changelogHtml = `
+                    <div class="version-header">
+                        <span class="version-tag">${release.tag_name}</span>
+                        <span class="version-date">${formatDate(release.published_at)}</span>
+                    </div>
+                    <div class="release-notes">${release.body ?
+                        release.body.split('\n').filter(l => l.trim()).map(l => `<p>${l}</p>`).join('') :
+                        '<p>Mise à jour de maintenance</p>'
+                    }</div>
+                `;
+                document.getElementById('changelog-container').innerHTML = changelogHtml;
+
+            } catch (error) {
+                console.error('Error loading release:', error);
+                // Fallback to static content
+                document.getElementById('version-badge').textContent = 'v1.1.0 • Windows';
+                document.getElementById('download-btn').href =
+                    'https://github.com/A-007481D/RetailManager/releases';
+                document.getElementById('file-info').textContent =
+                    'Voir les versions disponibles sur GitHub';
+                document.getElementById('changelog-container').innerHTML = `
+                    <div class="version-header">
+                        <span class="version-tag">v1.1.0</span>
+                        <span class="version-date">Janvier 2026</span>
+                    </div>
+                    <ul>
+                        <li>✅ Messages d'erreur en français</li>
+                        <li>✅ Protection contre la suppression accidentelle</li>
+                        <li>✅ Validation avancée des factures</li>
+                    </ul>
+                `;
+            }
+        }
+
+        // Load on page ready
+        document.addEventListener('DOMContentLoaded', loadLatestRelease);
+    </script>
 </body>
 
 </html>
