@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { GetDashboardStats, GetAvailableYears, GeneratePDF, OpenPDF, PrintPDF, GetVersion, BackupDatabase } from '../../wailsjs/go/main/App';
+import { GetDashboardStats, GetAvailableYears, GeneratePDF, OpenPDF, PrintPDF, GetVersion, BackupDatabase, RestoreDatabase } from '../../wailsjs/go/main/App';
 import { main, invoice } from '../../wailsjs/go/models';
 import {
     TrendingUp as TrendingUpIcon,
@@ -11,6 +11,7 @@ import {
     Eye as EyeIcon,
     Printer as PrinterIcon,
     Save as SaveIcon,
+    Upload as UploadIcon,
     CheckCircle as CheckCircleIcon2,
     XCircle as XCircleIcon
 } from 'lucide-react';
@@ -18,24 +19,13 @@ import { MoneyIcon as MoneyIconLegacy, BoxIcon, DocumentCheckIcon, WarningIcon, 
 import { RevenueChart } from './RevenueChart';
 import { TopProductsChart } from './TopProductsChart';
 import { TopClientsList } from './TopClientsList';
+import { ConfirmModal } from './ConfirmModal';
 
 interface DashboardProps {
     onNewInvoice?: () => void;
     onEditInvoice?: (invoice: any) => void;
     onViewAllInvoices?: () => void;
 }
-
-// Extend the generated type to include new fields until regeneration
-// interface ExtendedDashboardStats extends main.DashboardStats {
-//     InvoiceStats?: {
-//         TotalRevenue: number;
-//         TotalInvoices: number;
-//         RecentInvoices: invoice.InvoiceResponse[];
-//         MonthlyRevenue: { month: string; revenue: number }[];
-//         TopClients: { name: string; totalSpend: number; invoiceCount: number }[];
-//         TopProducts: { name: string; quantitySold: number; revenue: number }[];
-//     };
-// }
 
 export const Dashboard: React.FC<DashboardProps> = ({ onNewInvoice, onEditInvoice, onViewAllInvoices }) => {
     const [stats, setStats] = useState<any>(null);
@@ -46,6 +36,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNewInvoice, onEditInvoic
     const [availableYears, setAvailableYears] = useState<number[]>([]);
     const [version, setVersion] = useState<string>('');
     const [backupStatus, setBackupStatus] = useState<{ success: boolean; message: string } | null>(null);
+    const [isRestoreModalOpen, setIsRestoreModalOpen] = useState(false);
+    const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
+    const [successMessage, setSuccessMessage] = useState("");
 
     const loadStats = async () => {
         try {
@@ -93,6 +86,31 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNewInvoice, onEditInvoic
         }
     };
 
+    const handleRestoreClick = () => {
+        setIsRestoreModalOpen(true);
+    };
+
+    const confirmRestore = async () => {
+        setIsRestoreModalOpen(false);
+        try {
+            setBackupStatus(null);
+            // @ts-ignore
+            const result = await RestoreDatabase();
+            if (result) {
+                setSuccessMessage(result);
+                setIsSuccessModalOpen(true);
+            }
+        } catch (err: any) {
+            setBackupStatus({ success: false, message: err?.message || "Erreur lors de la restauration" });
+        }
+    };
+
+    const handleSuccessClose = () => {
+        setIsSuccessModalOpen(false);
+        window.location.reload();
+    };
+
+
     useEffect(() => {
         loadYears();
         loadVersion();
@@ -109,35 +127,71 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNewInvoice, onEditInvoic
     if (!stats) return <div className="p-8 text-center text-red-500">Erreur de chargement</div>;
 
     return (
-        <div className="p-8 space-y-8 animate-fade-in">
-            <div className="flex justify-between items-center mb-8">
+        <div className="p-8 space-y-8 animate-fade-in relative">
+            <ConfirmModal
+                isOpen={isRestoreModalOpen}
+                title="Restauration de la base de données"
+                message={`ATTENTION : Cette action va REMPLACER toutes les données actuelles par celles de la sauvegarde.\n\nUne sauvegarde de sécurité automatique sera créée avant le remplacement.\n\nÊtes-vous sûr de vouloir continuer ?`}
+                onConfirm={confirmRestore}
+                onCancel={() => setIsRestoreModalOpen(false)}
+                confirmText="Oui, Restaurer"
+                cancelText="Annuler"
+                type="warning"
+            />
+
+            <ConfirmModal
+                isOpen={isSuccessModalOpen}
+                title="Restauration Réussie"
+                message={successMessage + "\n\nL'application va maintenant se recharger pour appliquer les changements."}
+                onConfirm={handleSuccessClose}
+                onCancel={handleSuccessClose}
+                confirmText="Fermer et Recharger"
+                cancelText="Fermer"
+                type="success"
+            />
+
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
                 <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-3">
                     <TrendingUpIcon className="w-8 h-8 text-blue-600" />
                     Tableau de Bord
                 </h2>
 
-                {/* Year Selector */}
-                <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-lg shadow-sm border border-gray-200">
-                    <CalendarIcon className="w-5 h-5 text-gray-500" />
-                    <select
-                        value={selectedYear}
-                        onChange={(e) => setSelectedYear(Number(e.target.value))}
-                        className="bg-transparent font-medium text-gray-700 focus:outline-none"
-                    >
-                        {availableYears.map(year => (
-                            <option key={year} value={year}>{year}</option>
-                        ))}
-                    </select>
-                </div>
+                {/* Controls Group */}
+                <div className="flex items-center gap-3 bg-white p-2 rounded-xl shadow-sm border border-gray-200">
+                    {/* Year Selector */}
+                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer border-r border-gray-100 pr-4">
+                        <CalendarIcon className="w-4 h-4 text-gray-500" />
+                        <select
+                            value={selectedYear}
+                            onChange={(e) => setSelectedYear(Number(e.target.value))}
+                            className="bg-transparent font-medium text-gray-700 focus:outline-none text-sm cursor-pointer"
+                        >
+                            {availableYears.map(year => (
+                                <option key={year} value={year}>{year}</option>
+                            ))}
+                        </select>
+                    </div>
 
-                <button
-                    onClick={handleBackup}
-                    className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg shadow-sm transition-colors ml-4"
-                    title="Sauvegarder les données"
-                >
-                    <SaveIcon className="w-5 h-5" />
-                    <span>Sauvegarder</span>
-                </button>
+                    {/* Restore Button */}
+                    <button
+                        onClick={handleRestoreClick}
+                        className="flex items-center gap-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 px-3 py-1.5 rounded-lg transition-all text-sm font-medium"
+                        title="Restaurer une sauvegarde"
+                    >
+                        <UploadIcon className="w-4 h-4" />
+                        <span className="hidden sm:inline">Restaurer</span>
+                    </button>
+
+                    {/* Backup Button */}
+                    <button
+                        onClick={handleBackup}
+                        className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded-lg shadow-sm transition-all text-sm font-medium ml-1"
+                        title="Sauvegarder les données"
+                    >
+                        <SaveIcon className="w-4 h-4" />
+                        <span className="hidden sm:inline">Sauvegarder</span>
+                    </button>
+                </div>
             </div>
 
             {/* Backup Status Alert */}

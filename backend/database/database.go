@@ -43,3 +43,15 @@ func InitDatabase() error {
 func GetDB() *gorm.DB {
 	return DB
 }
+
+// CloseDB closes the database connection
+func CloseDB() error {
+	if DB == nil {
+		return nil
+	}
+	sqlDB, err := DB.DB()
+	if err != nil {
+		return err
+	}
+	return sqlDB.Close()
+}

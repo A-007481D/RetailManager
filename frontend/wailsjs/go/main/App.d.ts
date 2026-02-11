@@ -41,6 +41,8 @@ export function OpenPDF(arg1:string):Promise<void>;
 
 export function PrintPDF(arg1:string):Promise<void>;
 
+export function RestoreDatabase():Promise<string>;
+
 export function SearchClients(arg1:string):Promise<Array<client.Client>>;
 
 export function UpdateClient(arg1:client.Client):Promise<void>;

@@ -18,7 +18,7 @@ import (
 	"factureapp/backend/invoice"
 )
 
-const AppVersion = "1.1.5"
+const AppVersion = "1.1.6"
 
 // App struct
 type App struct {
@@ -254,9 +254,19 @@ func (a *App) BackupDatabase() (string, error) {
 
 	// 2. Open Save Dialog
 	defaultName := fmt.Sprintf("Sauvegarde_FactureApp_%s.db", time.Now().Format("2006-01-02_15-04"))
+
+	// Create default backup directory in Documents
+	homeDir, err := os.UserHomeDir()
+	defaultDir := ""
+	if err == nil {
+		defaultDir = filepath.Join(homeDir, "Documents", "LogicielFacture_Backups")
+		_ = os.MkdirAll(defaultDir, 0755) // Create if not exists, ignore error
+	}
+
 	destinationPath, err := runtime.SaveFileDialog(a.ctx, runtime.SaveDialogOptions{
-		Title:           "Sauvegarder la base de données",
-		DefaultFilename: defaultName,
+		Title:            "Sauvegarder la base de données",
+		DefaultFilename:  defaultName,
+		DefaultDirectory: defaultDir,
 		Filters: []runtime.FileFilter{
 			{DisplayName: "Database Files (*.db)", Pattern: "*.db"},
 		},
@@ -291,4 +301,86 @@ func (a *App) BackupDatabase() (string, error) {
 	}
 
 	return fmt.Sprintf("Sauvegarde réussie dans: %s", destinationPath), nil
+}
+
+// RestoreDatabase allows the user to restore the database from a backup file
+func (a *App) RestoreDatabase() (string, error) {
+	// 1. Open File Dialog to select backup file
+	selection, err := runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
+		Title: "Sélectionnez le fichier de sauvegarde",
+		Filters: []runtime.FileFilter{
+			{DisplayName: "Database Files (*.db)", Pattern: "*.db"},
+		},
+	})
+	if err != nil {
+		return "", fmt.Errorf("erreur lors de la sélection du fichier: %w", err)
+	}
+
+	if selection == "" {
+		return "", nil // User cancelled
+	}
+
+	// 2. Locate current database
+	configDir, err := os.UserConfigDir()
+	if err != nil {
+		return "", fmt.Errorf("impossible de localiser le dossier de configuration: %w", err)
+	}
+	dbPath := filepath.Join(configDir, "FactureApp", "invoices.db")
+	backupPath := filepath.Join(configDir, "FactureApp", fmt.Sprintf("invoices_backup_%s.db", time.Now().Format("20060102_150405")))
+
+	// 3. Close current database connection
+	if err := database.CloseDB(); err != nil {
+		return "", fmt.Errorf("impossible de fermer la base de données actuelle: %w", err)
+	}
+
+	// 4. Backup current database (safety precaution)
+	// Only if it exists
+	if _, err := os.Stat(dbPath); err == nil {
+		input, err := os.Open(dbPath)
+		if err != nil {
+			return "", fmt.Errorf("impossible d'ouvrir la base de données actuelle pour la sauvegarde de sécurité: %w", err)
+		}
+		defer input.Close()
+
+		output, err := os.Create(backupPath)
+		if err != nil {
+			return "", fmt.Errorf("impossible de créer la sauvegarde de sécurité: %w", err)
+		}
+		defer output.Close()
+
+		if _, err = io.Copy(output, input); err != nil {
+			return "", fmt.Errorf("erreur lors de la copie de sécurité: %w", err)
+		}
+	}
+
+	// 5. Replace database with selected file
+	// We need to read the source (selection) and overwrite the target (dbPath)
+	sourceFile, err := os.Open(selection)
+	if err != nil {
+		return "", fmt.Errorf("impossible d'ouvrir le fichier de sauvegarde sélectionné: %w", err)
+	}
+	defer sourceFile.Close()
+
+	// Ensure target file is closed and removed/truncated
+	// Open with O_TRUNC to overwrite
+	destFile, err := os.OpenFile(dbPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
+	if err != nil {
+		return "", fmt.Errorf("impossible d'ouvrir le fichier de destination: %w", err)
+	}
+	defer destFile.Close()
+
+	if _, err = io.Copy(destFile, sourceFile); err != nil {
+		// Attempt to restore from safety backup?
+		return "", fmt.Errorf("erreur critique lors de la restauration: %w", err)
+	}
+
+	// 6. Re-initialize database connection
+	if err := database.InitDatabase(); err != nil {
+		return "", fmt.Errorf("impossible de réinitialiser la connexion à la base de données: %w", err)
+	}
+
+	// Re-run migrations to ensure schema is correct if restoring older version
+	a.startup(a.ctx)
+
+	return "Restauration réussie. L'application va redémarrer.", nil
 }

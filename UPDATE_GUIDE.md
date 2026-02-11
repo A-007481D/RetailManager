@@ -13,6 +13,15 @@ Pour éviter toute perte de données lors des mises à jour ou en cas de problè
 
 Un message de confirmation apparaîtra si la sauvegarde est réussie.
 
+### Comment Restaurer vos Données ? (Nouveau)
+Si vous changez d'ordinateur ou devez réinstaller l'application :
+1. Cliquez sur le bouton bleu **"Restaurer"** sur le Tableau de Bord.
+2. Sélectionnez votre fichier de sauvegarde (`.db`).
+3. Confirmez l'opération.
+4. L'application redémarrera avec vos données restaurées.
+
+> **ATTENTION** : La restauration effacera les données actuelles de l'application pour les remplacer par celles de la sauvegarde. Une copie de sécurité automatique est créée avant l'opération par précaution.
+
 ---
 
 ## 🔄 Comment Mettre à Jour l'Application

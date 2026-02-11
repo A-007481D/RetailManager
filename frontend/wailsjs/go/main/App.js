@@ -74,6 +74,10 @@ export function PrintPDF(arg1) {
   return window['go']['main']['App']['PrintPDF'](arg1);
 }
 
+export function RestoreDatabase() {
+  return window['go']['main']['App']['RestoreDatabase']();
+}
+
 export function SearchClients(arg1) {
   return window['go']['main']['App']['SearchClients'](arg1);
 }
