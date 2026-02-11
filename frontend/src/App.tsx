@@ -4,13 +4,16 @@ import { InvoiceForm } from './components/InvoiceForm';
 import { ProductList } from './components/ProductList';
 import { Dashboard } from './components/Dashboard';
 import { ClientList } from './components/ClientList';
+import { InvoiceList } from './components/InvoiceList';
 
 function App() {
     const [activeTab, setActiveTab] = useState<'dashboard' | 'invoices' | 'inventory' | 'clients'>('dashboard');
     const [invoiceToEdit, setInvoiceToEdit] = useState<any>(null);
+    const [showInvoiceForm, setShowInvoiceForm] = useState(false);
 
     const handleEditInvoice = (invoice: any) => {
         setInvoiceToEdit(invoice);
+        setShowInvoiceForm(true);
         setActiveTab('invoices');
     };
 
@@ -27,6 +30,7 @@ function App() {
                         onClick={() => {
                             setActiveTab('dashboard');
                             setInvoiceToEdit(null);
+                            setShowInvoiceForm(false);
                         }}
                         className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${activeTab === 'dashboard'
                             ? 'bg-white text-primary-600 shadow-sm'
@@ -38,13 +42,8 @@ function App() {
                     <button
                         onClick={() => {
                             setActiveTab('invoices');
-                            // Don't clear here to allow returning to edit if desired, 
-                            // OR clear if we want "Invoices" tab to always start fresh.
-                            // User request implies they want to avoid "mistaken re-edit".
-                            // So if they click "Invoices" manually, it should probably be fresh.
-                            // But if they are editing, they are ALREADY on 'invoices'.
-                            // If they click 'invoices' while editing, maybe reset?
-                            // Let's stick to clearing on OTHER tabs for now as requested.
+                            setShowInvoiceForm(false);
+                            setInvoiceToEdit(null);
                         }}
                         className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${activeTab === 'invoices'
                             ? 'bg-white text-primary-600 shadow-sm'
@@ -57,6 +56,7 @@ function App() {
                         onClick={() => {
                             setActiveTab('inventory');
                             setInvoiceToEdit(null);
+                            setShowInvoiceForm(false);
                         }}
                         className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${activeTab === 'inventory'
                             ? 'bg-white text-primary-600 shadow-sm'
@@ -69,6 +69,7 @@ function App() {
                         onClick={() => {
                             setActiveTab('clients');
                             setInvoiceToEdit(null);
+                            setShowInvoiceForm(false);
                         }}
                         className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${activeTab === 'clients'
                             ? 'bg-white text-primary-600 shadow-sm'
@@ -83,7 +84,28 @@ function App() {
             {/* Main Content */}
             <main className="flex-1 overflow-auto">
                 {activeTab === 'dashboard' && <Dashboard onEditInvoice={handleEditInvoice} />}
-                {activeTab === 'invoices' && <InvoiceForm invoiceToEdit={invoiceToEdit} onEditComplete={() => setInvoiceToEdit(null)} />}
+                {activeTab === 'invoices' && (
+                    showInvoiceForm ? (
+                        <InvoiceForm
+                            invoiceToEdit={invoiceToEdit}
+                            onEditComplete={() => {
+                                setInvoiceToEdit(null);
+                                setShowInvoiceForm(false);
+                            }}
+                        />
+                    ) : (
+                        <InvoiceList
+                            onNewInvoice={() => {
+                                setInvoiceToEdit(null);
+                                setShowInvoiceForm(true);
+                            }}
+                            onEditInvoice={(invoice) => {
+                                setInvoiceToEdit(invoice);
+                                setShowInvoiceForm(true);
+                            }}
+                        />
+                    )
+                )}
                 {activeTab === 'inventory' && <ProductList />}
                 {activeTab === 'clients' && <ClientList />}
             </main>

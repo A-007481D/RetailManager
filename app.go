@@ -3,9 +3,14 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 	goruntime "runtime"
+	"time"
+
+	"github.com/wailsapp/wails/v2/pkg/runtime"
 
 	"factureapp/backend/client"
 	"factureapp/backend/database"
@@ -231,4 +236,58 @@ func (a *App) GetAllClients() ([]client.Client, error) {
 // SearchClients searches clients
 func (a *App) SearchClients(query string) ([]client.Client, error) {
 	return a.clientService.SearchClients(query)
+}
+// BackupDatabase allows the user to save a backup of the database
+func (a *App) BackupDatabase() (string, error) {
+	// 1. Get database path
+	configDir, err := os.UserConfigDir()
+	if err != nil {
+		return "", fmt.Errorf("impossible de localiser le dossier de configuration: %w", err)
+	}
+	dbPath := filepath.Join(configDir, "FactureApp", "invoices.db")
+
+	// Verify database exists
+	if _, err := os.Stat(dbPath); os.IsNotExist(err) {
+		return "", fmt.Errorf("aucune base de données trouvée à sauvegarder (%s)", dbPath)
+	}
+
+	// 2. Open Save Dialog
+	defaultName := fmt.Sprintf("Sauvegarde_FactureApp_%s.db", time.Now().Format("2006-01-02_15-04"))
+	destinationPath, err := runtime.SaveFileDialog(a.ctx, runtime.SaveDialogOptions{
+		Title:           "Sauvegarder la base de données",
+		DefaultFilename: defaultName,
+		Filters: []runtime.FileFilter{
+			{DisplayName: "Database Files (*.db)", Pattern: "*.db"},
+		},
+	})
+
+	if err != nil {
+		return "", fmt.Errorf("erreur lors de la sélection du fichier: %w", err)
+	}
+
+	if destinationPath == "" {
+		return "", nil // User cancelled
+	}
+
+	// 3. Copy File safely (Database might be locked if heavily used, but SQLite handles read locks well usually)
+	// For absolute safety, we could use SQLite's backup API, but simple copy is usually fine for single-user desktop app
+	// when not in heavy write transaction.
+	input, err := os.Open(dbPath)
+	if err != nil {
+		return "", fmt.Errorf("impossible d'ouvrir la base de données source: %w", err)
+	}
+	defer input.Close()
+
+	output, err := os.Create(destinationPath)
+	if err != nil {
+		return "", fmt.Errorf("impossible de créer le fichier de sauvegarde: %w", err)
+	}
+	defer output.Close()
+
+	_, err = io.Copy(output, input)
+	if err != nil {
+		return "", fmt.Errorf("erreur lors de la copie des données: %w", err)
+	}
+
+	return fmt.Sprintf("Sauvegarde réussie dans: %s", destinationPath), nil
 }

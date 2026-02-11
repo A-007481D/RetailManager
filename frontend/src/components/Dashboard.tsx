@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { GetDashboardStats, GetAvailableYears, GeneratePDF, OpenPDF, PrintPDF, GetVersion } from '../../wailsjs/go/main/App';
+import { GetDashboardStats, GetAvailableYears, GeneratePDF, OpenPDF, PrintPDF, GetVersion, BackupDatabase } from '../../wailsjs/go/main/App';
 import { main, invoice } from '../../wailsjs/go/models';
 import {
     TrendingUp as TrendingUpIcon,
@@ -9,7 +9,10 @@ import {
     DollarSign as MoneyIcon,
     Calendar as CalendarIcon,
     Eye as EyeIcon,
-    Printer as PrinterIcon
+    Printer as PrinterIcon,
+    Save as SaveIcon,
+    CheckCircle as CheckCircleIcon2,
+    XCircle as XCircleIcon
 } from 'lucide-react';
 import { MoneyIcon as MoneyIconLegacy, BoxIcon, DocumentCheckIcon, WarningIcon, InvoiceIcon, PlusIcon, EditIcon } from './Icons';
 import { RevenueChart } from './RevenueChart';
@@ -41,6 +44,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNewInvoice, onEditInvoic
     const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
     const [availableYears, setAvailableYears] = useState<number[]>([]);
     const [version, setVersion] = useState<string>('');
+    const [backupStatus, setBackupStatus] = useState<{ success: boolean; message: string } | null>(null);
 
     const loadStats = async () => {
         try {
@@ -70,6 +74,21 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNewInvoice, onEditInvoic
             setVersion(ver);
         } catch (error) {
             console.error('Failed to load version:', error);
+        }
+    };
+
+    const handleBackup = async () => {
+        try {
+            setBackupStatus(null);
+            // @ts-ignore
+            const result = await BackupDatabase();
+            if (result) {
+                setBackupStatus({ success: true, message: result });
+                // Auto dismiss success after 5 seconds
+                setTimeout(() => setBackupStatus(null), 5000);
+            }
+        } catch (err: any) {
+            setBackupStatus({ success: false, message: err?.message || "Erreur lors de la sauvegarde" });
         }
     };
 
@@ -109,7 +128,35 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNewInvoice, onEditInvoic
                         ))}
                     </select>
                 </div>
+
+                <button
+                    onClick={handleBackup}
+                    className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg shadow-sm transition-colors ml-4"
+                    title="Sauvegarder les données"
+                >
+                    <SaveIcon className="w-5 h-5" />
+                    <span>Sauvegarder</span>
+                </button>
             </div>
+
+            {/* Backup Status Alert */}
+            {backupStatus && (
+                <div className={`mb-4 p-4 rounded-lg border flex items-start gap-3 ${backupStatus.success ? 'bg-green-50 border-green-200 text-green-700' : 'bg-red-50 border-red-200 text-red-700'}`}>
+                    {backupStatus.success ? <CheckCircleIcon2 className="w-5 h-5 mt-0.5" /> : <XCircleIcon className="w-5 h-5 mt-0.5" />}
+                    <div className="flex-1">
+                        <p className="font-medium">{backupStatus.success ? "Succès" : "Erreur"}</p>
+                        <p className="text-sm">{backupStatus.message}</p>
+                    </div>
+                    <button
+                        onClick={() => setBackupStatus(null)}
+                        className={`font-bold text-lg leading-none ${backupStatus.success ? 'text-green-700' : 'text-red-700'}`}
+                    >
+                        ×
+                    </button>
+                </div>
+            )}
+
+            {/* PV Error Alert */}
 
             {/* PDF Error Alert */}
             {pdfError && (
