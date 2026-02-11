@@ -22,6 +22,7 @@ import { TopClientsList } from './TopClientsList';
 interface DashboardProps {
     onNewInvoice?: () => void;
     onEditInvoice?: (invoice: any) => void;
+    onViewAllInvoices?: () => void;
 }
 
 // Extend the generated type to include new fields until regeneration
@@ -36,7 +37,7 @@ interface DashboardProps {
 //     };
 // }
 
-export const Dashboard: React.FC<DashboardProps> = ({ onNewInvoice, onEditInvoice }) => {
+export const Dashboard: React.FC<DashboardProps> = ({ onNewInvoice, onEditInvoice, onViewAllInvoices }) => {
     const [stats, setStats] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -270,6 +271,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNewInvoice, onEditInvoic
                             <InvoiceIcon className="w-5 h-5 text-gray-500" />
                             Factures Récentes
                         </h2>
+                        {onViewAllInvoices && (
+                            <button
+                                onClick={onViewAllInvoices}
+                                className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1"
+                            >
+                                Voir tout →
+                            </button>
+                        )}
                     </div>
                     <div className="overflow-x-auto">
                         <table className="w-full">

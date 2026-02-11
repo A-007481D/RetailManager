@@ -18,7 +18,7 @@ import (
 	"factureapp/backend/invoice"
 )
 
-const AppVersion = "1.1.0"
+const AppVersion = "1.1.5"
 
 // App struct
 type App struct {
@@ -237,6 +237,7 @@ func (a *App) GetAllClients() ([]client.Client, error) {
 func (a *App) SearchClients(query string) ([]client.Client, error) {
 	return a.clientService.SearchClients(query)
 }
+
 // BackupDatabase allows the user to save a backup of the database
 func (a *App) BackupDatabase() (string, error) {
 	// 1. Get database path

@@ -83,7 +83,16 @@ function App() {
 
             {/* Main Content */}
             <main className="flex-1 overflow-auto">
-                {activeTab === 'dashboard' && <Dashboard onEditInvoice={handleEditInvoice} />}
+                {activeTab === 'dashboard' && (
+                    <Dashboard
+                        onEditInvoice={handleEditInvoice}
+                        onViewAllInvoices={() => {
+                            setActiveTab('invoices');
+                            setShowInvoiceForm(false);
+                            setInvoiceToEdit(null);
+                        }}
+                    />
+                )}
                 {activeTab === 'invoices' && (
                     showInvoiceForm ? (
                         <InvoiceForm
