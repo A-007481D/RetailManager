@@ -48,21 +48,26 @@ func (a *App) startup(ctx context.Context) {
 
 	// Initialize database
 	if err := database.InitDatabase(); err != nil {
-		panic(fmt.Sprintf("Failed to initialize database: %v", err))
+		fmt.Printf("ERREUR CRITIQUE: Échec de l'initialisation de la base de données: %v\n", err)
+		// We can't use runtime.MessageDialog yet as the window might not be ready,
+		// but Wails will catch the panic if we let it bubble up, or we can just exit.
+		// For now, let's keep a panic but with a more descriptive French message
+		// that might be visible in some logs or debug windows.
+		panic(fmt.Sprintf("Erreur lors du démarrage de la base de données. L'application est peut-être déjà ouverte ?\n\nDétail: %v", err))
 	}
 
 	// Run migrations
 	if err := a.inventoryService.Migrate(); err != nil {
-		panic(fmt.Sprintf("Failed to run inventory migrations: %v", err))
+		panic(fmt.Sprintf("Erreur lors de la mise à jour (Inventaire): %v", err))
 	}
 	if err := a.invoiceService.Migrate(); err != nil {
-		panic(fmt.Sprintf("Failed to run invoice migrations: %v", err))
+		panic(fmt.Sprintf("Erreur lors de la mise à jour (Factures): %v", err))
 	}
 	if err := a.clientService.Migrate(); err != nil {
-		panic(fmt.Sprintf("Failed to run client migrations: %v", err))
+		panic(fmt.Sprintf("Erreur lors de la mise à jour (Clients): %v", err))
 	}
 
-	fmt.Println("FactureApp started successfully")
+	fmt.Println("RetailManager started successfully")
 }
 
 // CreateInvoice creates a new invoice and returns the response

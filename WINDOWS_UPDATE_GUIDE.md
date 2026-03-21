@@ -6,6 +6,9 @@
 2. **Lancez** l'installateur (double-clic)
 3. **Suivez** les étapes → Terminé!
 
+> [!NOTE]
+> L'application a été renommée de **FactureApp** à **RetailManager**. L'installateur mettra à jour vos raccourcis automatiquement.
+
 **Vos données (factures, clients, produits) sont automatiquement préservées!**
 
 ---

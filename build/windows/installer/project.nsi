@@ -82,6 +82,11 @@ FunctionEnd
 Section
     !insertmacro wails.setShellContext
 
+    # Clean up legacy version (FactureApp) shortcuts if they exist
+    Delete "$SMPROGRAMS\FactureApp.lnk"
+    Delete "$DESKTOP\FactureApp.lnk"
+    Delete "$QUICKLAUNCH\FactureApp.lnk"
+
     !insertmacro wails.webview2runtime
 
     SetOutPath $INSTDIR
