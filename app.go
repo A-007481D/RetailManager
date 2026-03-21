@@ -18,7 +18,7 @@ import (
 	"factureapp/backend/invoice"
 )
 
-const AppVersion = "1.1.6"
+const AppVersion = "1.1.7"
 
 // App struct
 type App struct {

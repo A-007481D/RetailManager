@@ -5,6 +5,26 @@ All notable changes to RetailManager will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.7] - 2026-03-21
+
+### Added
+- **Windows Compatibility Fix**: Support for Windows 7 (SP1), Windows 8, and Windows 10/11 with compatibility shims. Fixed the "Windows 10 only" error on some systems.
+- **Enhanced Data Protection**: Improved internal database connection handling and migration safety.
+- **Reliable Startup**: Added extra checks for system configuration directory accessibility.
+
+### Changed
+- Lowered installer minimum OS requirement to Windows 7 to handle OS version reporting issues on Windows 11.
+
+---
+
+## [1.1.6] - 2026-02-11
+
+### Added
+- **Backup & Restore**: New UI buttons on Dashboard to manually save and restore database files.
+- **Auto-Backup**: Automatically creates a safety copy before database restoration.
+
+---
+
 ## [1.1.0] - 2026-01-07
 
 ### Added

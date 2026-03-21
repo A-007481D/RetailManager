@@ -198,20 +198,20 @@
             } catch (error) {
                 console.error('Error loading release:', error);
                 // Fallback to static content
-                document.getElementById('version-badge').textContent = 'v1.1.0 • Windows';
+                document.getElementById('version-badge').textContent = 'v1.1.7 • Windows';
                 document.getElementById('download-btn').href =
                     'https://github.com/A-007481D/RetailManager/releases';
                 document.getElementById('file-info').textContent =
                     'Voir les versions disponibles sur GitHub';
                 document.getElementById('changelog-container').innerHTML = `
                     <div class="version-header">
-                        <span class="version-tag">v1.1.0</span>
-                        <span class="version-date">Janvier 2026</span>
+                        <span class="version-tag">v1.1.7</span>
+                        <span class="version-date">Mars 2026</span>
                     </div>
                     <ul>
-                        <li>✅ Messages d'erreur en français</li>
-                        <li>✅ Protection contre la suppression accidentelle</li>
-                        <li>✅ Validation avancée des factures</li>
+                        <li>✅ Correction de compatibilité Windows (7/8/10/11)</li>
+                        <li>✅ Boutons Sauvegarder & Restaurer</li>
+                        <li>✅ Protection des données améliorée</li>
                     </ul>
                 `;
             }
