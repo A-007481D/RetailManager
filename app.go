@@ -19,7 +19,7 @@ import (
 	"factureapp/backend/invoice"
 )
 
-const AppVersion = "1.1.7"
+const AppVersion = "1.1.9"
 
 // App struct
 type App struct {
@@ -46,26 +46,59 @@ func NewApp() *App {
 // so we can call the runtime methods
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
+	fmt.Println("Wails Context Initialized.")
 
 	// Initialize database
+	fmt.Println("Initializing Database...")
 	if err := database.InitDatabase(); err != nil {
-		fmt.Printf("ERREUR CRITIQUE: Échec de l'initialisation de la base de données: %v\n", err)
-		// We can't use runtime.MessageDialog yet as the window might not be ready,
-		// but Wails will catch the panic if we let it bubble up, or we can just exit.
-		// For now, let's keep a panic but with a more descriptive French message
-		// that might be visible in some logs or debug windows.
-		panic(fmt.Sprintf("Erreur lors du démarrage de la base de données. L'application est peut-être déjà ouverte ?\n\nDétail: %v", err))
+		errorMessage := fmt.Sprintf("ERREUR CRITIQUE: Échec de l'initialisation de la base de données: %v\n\nL'application est peut-être déjà ouverte ?", err)
+		fmt.Println(errorMessage)
+		
+		// Fallback to native message box for visibility in production
+		runtime.MessageDialog(ctx, runtime.MessageDialogOptions{
+			Type:    runtime.ErrorDialog,
+			Title:   "Erreur de Démarrage",
+			Message: errorMessage,
+		})
+		os.Exit(1)
 	}
+	fmt.Println("Database Initialized Successfully.")
 
 	// Run migrations
+	fmt.Println("Running Inventory Migrations...")
 	if err := a.inventoryService.Migrate(); err != nil {
-		panic(fmt.Sprintf("Erreur lors de la mise à jour (Inventaire): %v", err))
+		errorMessage := fmt.Sprintf("Erreur lors de la mise à jour (Inventaire): %v", err)
+		fmt.Println(errorMessage)
+		runtime.MessageDialog(ctx, runtime.MessageDialogOptions{
+			Type:    runtime.ErrorDialog,
+			Title:   "Erreur de Migration",
+			Message: errorMessage,
+		})
+		os.Exit(1)
 	}
+
+	fmt.Println("Running Invoice Migrations...")
 	if err := a.invoiceService.Migrate(); err != nil {
-		panic(fmt.Sprintf("Erreur lors de la mise à jour (Factures): %v", err))
+		errorMessage := fmt.Sprintf("Erreur lors de la mise à jour (Factures): %v", err)
+		fmt.Println(errorMessage)
+		runtime.MessageDialog(ctx, runtime.MessageDialogOptions{
+			Type:    runtime.ErrorDialog,
+			Title:   "Erreur de Migration",
+			Message: errorMessage,
+		})
+		os.Exit(1)
 	}
+
+	fmt.Println("Running Client Migrations...")
 	if err := a.clientService.Migrate(); err != nil {
-		panic(fmt.Sprintf("Erreur lors de la mise à jour (Clients): %v", err))
+		errorMessage := fmt.Sprintf("Erreur lors de la mise à jour (Clients): %v", err)
+		fmt.Println(errorMessage)
+		runtime.MessageDialog(ctx, runtime.MessageDialogOptions{
+			Type:    runtime.ErrorDialog,
+			Title:   "Erreur de Migration",
+			Message: errorMessage,
+		})
+		os.Exit(1)
 	}
 
 	fmt.Println("RetailManager started successfully")
