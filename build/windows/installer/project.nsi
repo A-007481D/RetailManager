@@ -81,7 +81,7 @@ InstallDir "$PROGRAMFILES64\${INFO_COMPANYNAME}\${INFO_PRODUCTNAME}" # Default i
 ShowInstDetails show # This will always show the installation details.
 
 Function .onInit
-   !insertmacro wails.checkArchitecture
+   # !insertmacro wails.checkArchitecture
 FunctionEnd
 
 Section
