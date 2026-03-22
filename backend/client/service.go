@@ -22,6 +22,7 @@ func NewService() *Service {
 // Migrate runs database migrations for client models
 func (s *Service) Migrate() error {
 	db := database.GetDB()
+	// We use a regular index instead of uniqueIndex to allow 000000000000000 placeholders
 	return db.AutoMigrate(&Client{})
 }
 
@@ -42,12 +43,17 @@ func (s *Service) CreateClient(client Client) error {
 	}
 
 	db := database.GetDB()
-	if err := db.Create(&client).Error; err != nil {
-		// Check for unique constraint violation
-		errMsg := err.Error()
-		if contains(errMsg, "UNIQUE constraint failed") || contains(errMsg, "duplicate key") {
+	
+	// Check for unique constraint violation manually, EXCEPT for the placeholder "000000000000000"
+	if client.ICE != "000000000000000" {
+		var count int64
+		db.Model(&Client{}).Where("ice = ? AND deleted_at IS NULL", client.ICE).Count(&count)
+		if count > 0 {
 			return fmt.Errorf("un client avec l'ICE '%s' existe déjà", client.ICE)
 		}
+	}
+
+	if err := db.Create(&client).Error; err != nil {
 		return fmt.Errorf("échec de la création du client: %w", err)
 	}
 	return nil
@@ -67,6 +73,16 @@ func (s *Service) UpdateClient(client Client) error {
 	}
 
 	db := database.GetDB()
+
+	// Check for unique constraint violation manually, EXCEPT for the placeholder "000000000000000"
+	if client.ICE != "000000000000000" {
+		var count int64
+		db.Model(&Client{}).Where("ice = ? AND id != ? AND deleted_at IS NULL", client.ICE, client.ID).Count(&count)
+		if count > 0 {
+			return fmt.Errorf("un client avec l'ICE '%s' existe déjà", client.ICE)
+		}
+	}
+
 	if err := db.Save(&client).Error; err != nil {
 		return fmt.Errorf("échec de la mise à jour du client: %w", err)
 	}

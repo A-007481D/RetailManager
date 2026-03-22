@@ -8,7 +8,7 @@ import (
 type Client struct {
 	gorm.Model
 	Name    string `json:"name"`
-	ICE     string `gorm:"uniqueIndex" json:"ice"`
+	ICE     string `gorm:"index" json:"ice"`
 	City    string `json:"city"`
 	Address string `json:"address"`
 	Phone   string `json:"phone"`
