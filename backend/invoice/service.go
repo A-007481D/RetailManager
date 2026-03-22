@@ -505,7 +505,7 @@ func (s *Service) GetStats(year int) (*InvoiceStats, error) {
 
 	// Recent Invoices (Filtered by year)
 	var recent []Invoice
-	if err := db.Preload("Items").Where("year = ?", year).Order("created_at desc").Limit(5).Find(&recent).Error; err != nil {
+	if err := db.Preload("Items").Where("year = ?", year).Order("created_at desc").Limit(15).Find(&recent).Error; err != nil {
 		return nil, err
 	}
 

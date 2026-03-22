@@ -5,3 +5,5 @@ build/bin
 *.exe
 *.dll
 .idea/
+*.zip
+RetailManager_v1.1.8/

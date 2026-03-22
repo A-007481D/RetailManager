@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	goruntime "runtime"
+	"strings"
 	"time"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
@@ -164,6 +165,23 @@ func (a *App) PrintPDF(pdfPath string) error {
 		return fmt.Errorf("impossible d'imprimer le PDF: %w", err)
 	}
 
+	return nil
+}
+
+// PrintMultiplePDFs sends multiple PDFs directly to the default printer
+func (a *App) PrintMultiplePDFs(pdfPaths []string) error {
+	var errs []string
+	for _, pdfPath := range pdfPaths {
+		if err := a.PrintPDF(pdfPath); err != nil {
+			errs = append(errs, fmt.Sprintf("%s: %v", filepath.Base(pdfPath), err))
+		}
+		// Small delay to avoid overwhelming the print spooler on some systems
+		time.Sleep(200 * time.Millisecond)
+	}
+
+	if len(errs) > 0 {
+		return fmt.Errorf("erreurs lors de l'impression: %s", strings.Join(errs, "; "))
+	}
 	return nil
 }
 

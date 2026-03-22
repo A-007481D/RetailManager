@@ -14,7 +14,7 @@
     !define INFO_PRODUCTNAME "RetailManager"
 !endif
 !ifndef INFO_PRODUCTVERSION
-    !define INFO_PRODUCTVERSION "1.1.0"
+    !define INFO_PRODUCTVERSION "1.1.7"
 !endif
 !ifndef INFO_COPYRIGHT
     !define INFO_COPYRIGHT "Copyright 2026 A-007481D"

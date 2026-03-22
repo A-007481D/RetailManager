@@ -39,6 +39,8 @@ export function GetVersion():Promise<string>;
 
 export function OpenPDF(arg1:string):Promise<void>;
 
+export function PrintMultiplePDFs(arg1:Array<string>):Promise<void>;
+
 export function PrintPDF(arg1:string):Promise<void>;
 
 export function RestoreDatabase():Promise<string>;

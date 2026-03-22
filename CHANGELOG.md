@@ -5,6 +5,19 @@ All notable changes to RetailManager will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.8] - 2026-03-22
+
+### Added
+- **Impression Groupée (Bulk Printing)** : Possibilité de sélectionner plusieurs factures dans la liste et de les imprimer toutes en une seule fois.
+- **Raccourci Bureau** : L'installateur propose désormais une case à cocher pour créer un raccourci sur le bureau à la fin de l'installation.
+- **Identité RetailManager** : Finalisation du renommage de l'application (Titre de fenêtre et Installateur).
+
+### Changed
+- **Visibilité du Tableau de Bord** : Le nombre de factures récentes affichées est passé de 5 à **15**.
+- **Nettoyage Automatique** : L'installateur supprime désormais les anciens raccourcis "FactureApp" pour éviter les doublons.
+
+---
+
 ## [1.1.7] - 2026-03-21
 
 ### Added

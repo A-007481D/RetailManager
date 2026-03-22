@@ -51,7 +51,7 @@ run: ## Run the built application
 
 dev: ## Run in development mode (hot reload)
 	@echo "Starting development mode..."
-	@$(WAILS_CMD) dev
+	@$(WAILS_CMD) dev -tags webkit2_41
 
 clean: ## Clean build artifacts
 	@echo "Cleaning..."

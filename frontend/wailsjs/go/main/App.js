@@ -70,6 +70,10 @@ export function OpenPDF(arg1) {
   return window['go']['main']['App']['OpenPDF'](arg1);
 }
 
+export function PrintMultiplePDFs(arg1) {
+  return window['go']['main']['App']['PrintMultiplePDFs'](arg1);
+}
+
 export function PrintPDF(arg1) {
   return window['go']['main']['App']['PrintPDF'](arg1);
 }
