@@ -18,11 +18,13 @@ import (
 type Service struct {
 	configDir     string
 	srv           *sheets.Service
-	headersPushed bool
+	headersPushed map[string]bool
 }
 
 func NewService() *Service {
-	s := &Service{}
+	s := &Service{
+		headersPushed: make(map[string]bool),
+	}
 	configDir, err := os.UserConfigDir()
 	if err != nil {
 		log.Printf("Cannot get user config dir for Sheets: %v", err)
@@ -70,7 +72,6 @@ func (s *Service) AppendInvoice(inv *invoice.InvoiceResponse) error {
 		return fmt.Errorf("Sheets API is not configured (missing credentials.json)")
 	}
 
-	// Fetch dynamic settings to get Spreadsheet ID
 	settingsSvc := appsettings.NewService()
 	appSettings, err := settingsSvc.GetSettings()
 	if err != nil {
@@ -82,13 +83,17 @@ func (s *Service) AppendInvoice(inv *invoice.InvoiceResponse) error {
 		return fmt.Errorf("Google Sheets ID is not configured in Settings")
 	}
 
-	// Check and push headers if sheet is empty
-	if !s.headersPushed {
-		s.ensureHeaders(spreadsheetId)
+	yearStr := "General"
+	if len(inv.Date) >= 10 {
+		yearStr = inv.Date[6:]
 	}
 
-	// Prepare data
-	// Columns: Invoice ID, Date, Client Name, ICE, Total HT, Total TVA, Total TTC, Payment Method
+	if !s.headersPushed[yearStr] {
+		if err := s.ensureSheetExistsAndHasHeaders(spreadsheetId, yearStr); err != nil {
+			return err
+		}
+	}
+
 	vr := &sheets.ValueRange{
 		Values: [][]interface{}{
 			{
@@ -104,7 +109,7 @@ func (s *Service) AppendInvoice(inv *invoice.InvoiceResponse) error {
 		},
 	}
 
-	writeRange := "A:H" // General range, API will find the next empty row
+	writeRange := fmt.Sprintf("%s!A:H", yearStr)
 
 	_, err = s.srv.Spreadsheets.Values.Append(spreadsheetId, writeRange, vr).
 		ValueInputOption("USER_ENTERED").
@@ -115,20 +120,49 @@ func (s *Service) AppendInvoice(inv *invoice.InvoiceResponse) error {
 		return fmt.Errorf("failed to append row to sheets: %w", err)
 	}
 
-	log.Printf("Successfully appended invoice %s to Google Sheets", inv.FormattedID)
+	log.Printf("Successfully appended invoice %s to Google Sheets tab %s", inv.FormattedID, yearStr)
 	return nil
 }
 
-func (s *Service) ensureHeaders(spreadsheetId string) {
-	readRange := "A1:H1"
+func (s *Service) ensureSheetExistsAndHasHeaders(spreadsheetId string, sheetName string) error {
+	spreadsheet, err := s.srv.Spreadsheets.Get(spreadsheetId).Do()
+	if err != nil {
+		return fmt.Errorf("failed to get spreadsheet info: %w", err)
+	}
+
+	sheetExists := false
+	for _, sheet := range spreadsheet.Sheets {
+		if sheet.Properties.Title == sheetName {
+			sheetExists = true
+			break
+		}
+	}
+
+	if !sheetExists {
+		addSheetRequest := &sheets.Request{
+			AddSheet: &sheets.AddSheetRequest{
+				Properties: &sheets.SheetProperties{
+					Title: sheetName,
+				},
+			},
+		}
+		batchUpdateRequest := &sheets.BatchUpdateSpreadsheetRequest{
+			Requests: []*sheets.Request{addSheetRequest},
+		}
+		_, err := s.srv.Spreadsheets.BatchUpdate(spreadsheetId, batchUpdateRequest).Do()
+		if err != nil {
+			return fmt.Errorf("failed to create sheet tab %s: %w", sheetName, err)
+		}
+		log.Printf("Successfully created new tab: %s", sheetName)
+	}
+
+	readRange := fmt.Sprintf("%s!A1:H1", sheetName)
 	resp, err := s.srv.Spreadsheets.Values.Get(spreadsheetId, readRange).Do()
 	if err != nil {
-		log.Printf("Failed to read headers: %v", err)
-		return
+		return fmt.Errorf("failed to read headers for sheet %s: %w", sheetName, err)
 	}
 
 	if len(resp.Values) == 0 {
-		// Sheet is empty, push headers
 		headerVr := &sheets.ValueRange{
 			Values: [][]interface{}{
 				{"ID Facture", "Date", "Client", "ICE", "Total HT", "TVA", "Total TTC", "Paiement"},
@@ -138,13 +172,14 @@ func (s *Service) ensureHeaders(spreadsheetId string) {
 			ValueInputOption("USER_ENTERED").
 			Do()
 		if err != nil {
-			log.Printf("Failed to push headers: %v", err)
+			log.Printf("Failed to push headers to %s: %v", sheetName, err)
 		} else {
-			log.Printf("Successfully pushed table headers to Google Sheets")
+			log.Printf("Successfully pushed table headers to %s", sheetName)
 		}
 	}
-	
-	s.headersPushed = true
+
+	s.headersPushed[sheetName] = true
+	return nil
 }
 
 func (s *Service) BatchAppendInvoices(invoices []invoice.InvoiceResponse) error {
@@ -152,7 +187,6 @@ func (s *Service) BatchAppendInvoices(invoices []invoice.InvoiceResponse) error 
 		return fmt.Errorf("Sheets API is not configured (missing credentials.json)")
 	}
 
-	// Fetch dynamic settings to get Spreadsheet ID
 	settingsSvc := appsettings.NewService()
 	appSettings, err := settingsSvc.GetSettings()
 	if err != nil {
@@ -164,18 +198,18 @@ func (s *Service) BatchAppendInvoices(invoices []invoice.InvoiceResponse) error 
 		return fmt.Errorf("Google Sheets ID is not configured in Settings")
 	}
 
-	// Check and push headers if sheet is empty
-	if !s.headersPushed {
-		s.ensureHeaders(spreadsheetId)
-	}
-
 	if len(invoices) == 0 {
 		return nil
 	}
 
-	var values [][]interface{}
+	// Group invoices by year
+	invoicesByYear := make(map[string][][]interface{})
 	for _, inv := range invoices {
-		values = append(values, []interface{}{
+		yearStr := "General"
+		if len(inv.Date) >= 10 {
+			yearStr = inv.Date[6:]
+		}
+		row := []interface{}{
 			inv.FormattedID,
 			inv.Date,
 			inv.ClientName,
@@ -184,24 +218,34 @@ func (s *Service) BatchAppendInvoices(invoices []invoice.InvoiceResponse) error 
 			fmt.Sprintf("%.2f", inv.TotalTVA),
 			fmt.Sprintf("%.2f", inv.TotalTTC),
 			inv.PaymentMethod,
-		})
+		}
+		invoicesByYear[yearStr] = append(invoicesByYear[yearStr], row)
 	}
 
-	vr := &sheets.ValueRange{
-		Values: values,
+	// Append per year
+	for yearStr, rows := range invoicesByYear {
+		if !s.headersPushed[yearStr] {
+			if err := s.ensureSheetExistsAndHasHeaders(spreadsheetId, yearStr); err != nil {
+				return err
+			}
+		}
+
+		vr := &sheets.ValueRange{
+			Values: rows,
+		}
+
+		writeRange := fmt.Sprintf("%s!A:H", yearStr)
+
+		_, err = s.srv.Spreadsheets.Values.Append(spreadsheetId, writeRange, vr).
+			ValueInputOption("USER_ENTERED").
+			InsertDataOption("INSERT_ROWS").
+			Do()
+
+		if err != nil {
+			return fmt.Errorf("failed to batch append rows to tab %s: %w", yearStr, err)
+		}
+		log.Printf("Successfully batch appended %d invoices to tab %s", len(rows), yearStr)
 	}
 
-	writeRange := "A:H" // General range, API will find the next empty row
-
-	_, err = s.srv.Spreadsheets.Values.Append(spreadsheetId, writeRange, vr).
-		ValueInputOption("USER_ENTERED").
-		InsertDataOption("INSERT_ROWS").
-		Do()
-
-	if err != nil {
-		return fmt.Errorf("failed to batch append rows to sheets: %w", err)
-	}
-
-	log.Printf("Successfully batch appended %d invoices to Google Sheets", len(invoices))
 	return nil
 }

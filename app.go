@@ -21,7 +21,7 @@ import (
 	"factureapp/backend/sheets"
 )
 
-const AppVersion = "1.1.9"
+const AppVersion = "1.2.4"
 
 // App struct
 type App struct {
