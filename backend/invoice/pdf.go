@@ -2,6 +2,7 @@ package invoice
 
 import (
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 
@@ -73,7 +74,7 @@ func (s *Service) GeneratePDF(invoiceID uint) (string, error) {
 	m.AddRow(10)
 
 	// Totals section
-	s.addTotals(m, invoice)
+	s.addTotals(m, invoice, appSettings)
 
 	// Separator line
 	s.addSeparatorLine(m)
@@ -264,7 +265,7 @@ func (s *Service) addItemsTable(m core.Maroto, invoice *InvoiceResponse) {
 	)
 }
 
-func (s *Service) addTotals(m core.Maroto, invoice *InvoiceResponse) {
+func (s *Service) addTotals(m core.Maroto, invoice *InvoiceResponse, appSettings *settings.Settings) {
 	labelProps := props.Text{
 		Size:  10,
 		Align: align.Right,
@@ -284,9 +285,13 @@ func (s *Service) addTotals(m core.Maroto, invoice *InvoiceResponse) {
 	)
 
 	// TVA
+	tvaLabel := fmt.Sprintf("TVA %.0f%%:", appSettings.TVARate)
+	if appSettings.TVARate != math.Trunc(appSettings.TVARate) {
+		tvaLabel = fmt.Sprintf("TVA %.2f%%:", appSettings.TVARate)
+	}
 	m.AddRow(7,
 		col.New(8),
-		col.New(2).Add(text.New("TVA 20%:", labelProps)),
+		col.New(2).Add(text.New(tvaLabel, labelProps)),
 		col.New(2).Add(text.New(fmt.Sprintf("%.2f DH", invoice.TotalTVA), props.Text{
 			Size:  10,
 			Align: align.Right,

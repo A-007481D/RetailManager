@@ -4,6 +4,7 @@ import { useInvoice } from '../hooks/useInvoice';
 import { useClients } from '../hooks/useClients';
 import { ClientCombobox } from './ClientCombobox';
 import { ItemRow } from './ItemRow';
+import { GetSettings } from '../../wailsjs/go/main/App';
 import { PaymentSection } from './PaymentSection';
 import {
     InvoiceIcon,
@@ -25,6 +26,15 @@ interface InvoiceFormProps {
 export const InvoiceForm: React.FC<InvoiceFormProps> = ({ invoiceToEdit, onEditComplete }) => {
     const { products, fetchProducts } = useInventory();
     const { clients } = useClients();
+    const [tvaRate, setTvaRate] = React.useState<number>(20);
+
+    React.useEffect(() => {
+        GetSettings().then((settings) => {
+            if (settings && settings.tvaRate !== undefined) {
+                setTvaRate(settings.tvaRate);
+            }
+        }).catch(console.error);
+    }, []);
     const {
         formData,
         totalsPreview,
@@ -252,7 +262,7 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({ invoiceToEdit, onEditC
                                 </p>
                             </div>
                             <div className="text-center p-4 bg-white rounded-lg shadow-sm">
-                                <p className="text-sm text-gray-500">TVA (20%)</p>
+                                <p className="text-sm text-gray-500">TVA ({tvaRate}%)</p>
                                 <p className="text-2xl font-bold text-amber-600">
                                     {totalsPreview.totalTVA.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} DH
                                 </p>

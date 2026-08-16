@@ -8,6 +8,7 @@ import (
 
 	"factureapp/backend/database"
 	"factureapp/backend/inventory"
+	"factureapp/backend/settings"
 )
 
 // Service handles invoice business logic
@@ -116,8 +117,16 @@ func (s *Service) CreateInvoice(req InvoiceCreateRequest) (*InvoiceResponse, err
 
 	}
 
-	// Reverse tax calculation: HT = TTC / 1.20
-	totalHT := totalTTC / 1.20
+	// Reverse tax calculation
+	settingsSvc := settings.NewService()
+	appSettings, _ := settingsSvc.GetSettings()
+	tvaRate := appSettings.TVARate
+	if tvaRate == 0 {
+		tvaRate = 20.0 // Default fallback
+	}
+	tvaMultiplier := 1.0 + (tvaRate / 100.0)
+
+	totalHT := totalTTC / tvaMultiplier
 	totalTVA := totalTTC - totalHT
 
 	// Round to 2 decimal places
@@ -386,7 +395,15 @@ func (s *Service) ConvertToWords(amount float64) string {
 
 // CalculateTotals calculates HT, TVA from TTC (for preview)
 func (s *Service) CalculateTotals(totalTTC float64) map[string]interface{} {
-	totalHT := totalTTC / 1.20
+	settingsSvc := settings.NewService()
+	appSettings, _ := settingsSvc.GetSettings()
+	tvaRate := appSettings.TVARate
+	if tvaRate == 0 {
+		tvaRate = 20.0
+	}
+	tvaMultiplier := 1.0 + (tvaRate / 100.0)
+
+	totalHT := totalTTC / tvaMultiplier
 	totalTVA := totalTTC - totalHT
 
 	return map[string]interface{}{
