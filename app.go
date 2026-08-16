@@ -176,10 +176,19 @@ func (a *App) SyncOldInvoices() (int, error) {
 		return 0, err
 	}
 
+	if len(unsynced) == 0 {
+		return 0, nil
+	}
+
+	// Batch append to Sheets
+	if err := a.sheetsService.BatchAppendInvoices(unsynced); err != nil {
+		return 0, err
+	}
+
+	// Mark all as synced in DB
 	syncedCount := 0
 	for _, inv := range unsynced {
-		if err := a.sheetsService.AppendInvoice(&inv); err == nil {
-			_ = a.invoiceService.MarkAsSynced(inv.ID)
+		if err := a.invoiceService.MarkAsSynced(inv.ID); err == nil {
 			syncedCount++
 		}
 	}

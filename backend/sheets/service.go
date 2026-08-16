@@ -146,3 +146,62 @@ func (s *Service) ensureHeaders(spreadsheetId string) {
 	
 	s.headersPushed = true
 }
+
+func (s *Service) BatchAppendInvoices(invoices []invoice.InvoiceResponse) error {
+	if s.srv == nil {
+		return fmt.Errorf("Sheets API is not configured (missing credentials.json)")
+	}
+
+	// Fetch dynamic settings to get Spreadsheet ID
+	settingsSvc := appsettings.NewService()
+	appSettings, err := settingsSvc.GetSettings()
+	if err != nil {
+		return fmt.Errorf("failed to get settings: %w", err)
+	}
+
+	spreadsheetId := appSettings.GoogleSheetsID
+	if spreadsheetId == "" {
+		return fmt.Errorf("Google Sheets ID is not configured in Settings")
+	}
+
+	// Check and push headers if sheet is empty
+	if !s.headersPushed {
+		s.ensureHeaders(spreadsheetId)
+	}
+
+	if len(invoices) == 0 {
+		return nil
+	}
+
+	var values [][]interface{}
+	for _, inv := range invoices {
+		values = append(values, []interface{}{
+			inv.FormattedID,
+			inv.Date,
+			inv.ClientName,
+			inv.ClientICE,
+			fmt.Sprintf("%.2f", inv.TotalHT),
+			fmt.Sprintf("%.2f", inv.TotalTVA),
+			fmt.Sprintf("%.2f", inv.TotalTTC),
+			inv.PaymentMethod,
+		})
+	}
+
+	vr := &sheets.ValueRange{
+		Values: values,
+	}
+
+	writeRange := "A:H" // General range, API will find the next empty row
+
+	_, err = s.srv.Spreadsheets.Values.Append(spreadsheetId, writeRange, vr).
+		ValueInputOption("USER_ENTERED").
+		InsertDataOption("INSERT_ROWS").
+		Do()
+
+	if err != nil {
+		return fmt.Errorf("failed to batch append rows to sheets: %w", err)
+	}
+
+	log.Printf("Successfully batch appended %d invoices to Google Sheets", len(invoices))
+	return nil
+}
