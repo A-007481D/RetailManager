@@ -17,6 +17,7 @@ import (
 	"factureapp/backend/database"
 	"factureapp/backend/inventory"
 	"factureapp/backend/invoice"
+	"factureapp/backend/sheets"
 )
 
 const AppVersion = "1.1.9"
@@ -27,6 +28,7 @@ type App struct {
 	invoiceService   *invoice.Service
 	inventoryService *inventory.Service
 	clientService    *client.Service
+	sheetsService    *sheets.Service
 }
 
 // NewApp creates a new App application struct
@@ -34,11 +36,13 @@ func NewApp() *App {
 	inventoryService := inventory.NewService()
 	invoiceService := invoice.NewService(inventoryService)
 	clientService := client.NewService()
+	sheetsService := sheets.NewService()
 
 	return &App{
 		invoiceService:   invoiceService,
 		inventoryService: inventoryService,
 		clientService:    clientService,
+		sheetsService:    sheetsService,
 	}
 }
 
@@ -135,6 +139,13 @@ func (a *App) GeneratePDF(invoiceID uint) (string, error) {
 	if err != nil {
 		return "", err
 	}
+
+	// Auto-export to Google Sheets
+	inv, fetchErr := a.invoiceService.GetInvoiceByID(invoiceID)
+	if fetchErr == nil {
+		_ = a.sheetsService.AppendInvoice(inv)
+	}
+
 	return pdfPath, nil
 }
 
