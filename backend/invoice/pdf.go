@@ -14,12 +14,11 @@ import (
 	"github.com/johnfercher/maroto/v2/pkg/consts/fontstyle"
 	"github.com/johnfercher/maroto/v2/pkg/core"
 	"github.com/johnfercher/maroto/v2/pkg/props"
+
+	"factureapp/backend/settings"
 )
 
 const (
-	// CompanyICE is the placeholder for company ICE number
-	CompanyICE = "001844544000022" // Replace with actual company ICE
-
 	// TopMarginMM is the blank margin at top for pre-printed stationery
 	TopMarginMM = 40.0
 )
@@ -41,6 +40,13 @@ func (s *Service) GeneratePDF(invoiceID uint) (string, error) {
 		return "", fmt.Errorf("impossible de récupérer la facture: %w", err)
 	}
 
+	// Get settings
+	settingsSvc := settings.NewService()
+	appSettings, err := settingsSvc.GetSettings()
+	if err != nil {
+		return "", fmt.Errorf("impossible de récupérer les paramètres: %w", err)
+	}
+
 	// Configure Maroto
 	cfg := config.NewBuilder().
 		WithPageNumber().
@@ -52,7 +58,7 @@ func (s *Service) GeneratePDF(invoiceID uint) (string, error) {
 	m := maroto.New(cfg)
 
 	// Header section
-	s.addHeader(m, invoice)
+	s.addHeader(m, invoice, appSettings)
 
 	// Separator line
 	s.addSeparatorLine(m)
@@ -88,7 +94,7 @@ func (s *Service) GeneratePDF(invoiceID uint) (string, error) {
 	m.AddRow(15)
 
 	// Company ICE footer
-	s.addFooter(m)
+	s.addFooter(m, appSettings.CompanyICE, appSettings.CompanyName)
 
 	// Generate PDF
 	doc, err := m.Generate()
@@ -128,7 +134,7 @@ func (s *Service) addSeparatorLine(m core.Maroto) {
 	)
 }
 
-func (s *Service) addHeader(m core.Maroto, invoice *InvoiceResponse) {
+func (s *Service) addHeader(m core.Maroto, invoice *InvoiceResponse, appSettings *settings.Settings) {
 	// Determine which ID to show
 	displayID := invoice.FormattedID
 	if invoice.CustomFormattedID != "" {
@@ -410,13 +416,13 @@ func (s *Service) addPaymentDetails(m core.Maroto, invoice *InvoiceResponse) {
 	}
 }
 
-func (s *Service) addFooter(m core.Maroto) {
+func (s *Service) addFooter(m core.Maroto, ice string, name string) {
 	// Separator line
 	s.addSeparatorLine(m)
 
 	m.AddRow(10,
 		col.New(12).Add(
-			text.New("ICE Société: "+CompanyICE, props.Text{
+			text.New(name + " - ICE: " + ice, props.Text{
 				Size:  11,
 				Style: fontstyle.Bold,
 				Align: align.Center,

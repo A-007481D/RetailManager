@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { GetAllInvoices, GetAvailableYears, GeneratePDF, OpenPDF, PrintPDF, PrintMultiplePDFs } from '../../wailsjs/go/main/App';
+import { GetAllInvoices, GetAvailableYears, GeneratePDF, OpenPDF, PrintPDF, PrintMultiplePDFs, SyncOldInvoices } from '../../wailsjs/go/main/App';
 import { invoice } from '../../wailsjs/go/models';
 import {
     Eye as EyeIcon,
@@ -24,6 +24,8 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({ onNewInvoice, onEditIn
     const [pdfError, setPdfError] = useState<string | null>(null);
     const [selectedInvoices, setSelectedInvoices] = useState<Set<number>>(new Set());
     const [isPrinting, setIsPrinting] = useState(false);
+    const [isSyncing, setIsSyncing] = useState(false);
+    const [syncSuccess, setSyncSuccess] = useState<string | null>(null);
 
     const loadData = async () => {
         setLoading(true);
@@ -82,6 +84,26 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({ onNewInvoice, onEditIn
         }
     };
 
+    const handleSync = async () => {
+        setIsSyncing(true);
+        setPdfError(null);
+        setSyncSuccess(null);
+        try {
+            const count = await SyncOldInvoices();
+            if (count > 0) {
+                setSyncSuccess(`${count} facture(s) synchronisée(s) avec succès !`);
+                await loadData();
+            } else {
+                setSyncSuccess("Toutes les factures sont déjà synchronisées.");
+            }
+        } catch (err: any) {
+            console.error('Sync failed:', err);
+            setPdfError(err?.message || "Erreur lors de la synchronisation");
+        } finally {
+            setIsSyncing(false);
+        }
+    };
+
     const filteredInvoices = invoices.filter(inv =>
         inv.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         inv.formattedId.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -121,6 +143,13 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({ onNewInvoice, onEditIn
                         <PlusIcon className="w-5 h-5" />
                         Nouvelle Facture
                     </button>
+                    <button
+                        onClick={handleSync}
+                        disabled={isSyncing}
+                        className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium shadow-sm transition-all disabled:opacity-50 flex items-center gap-2"
+                    >
+                        {isSyncing ? "Sync..." : "Synchroniser avec Google Sheets"}
+                    </button>
                 </div>
             </div>
 
@@ -141,17 +170,31 @@ export const InvoiceList: React.FC<InvoiceListProps> = ({ onNewInvoice, onEditIn
                 </div>
             </div>
 
-            {/* Error Alert */}
             {pdfError && (
                 <div className="mb-4 p-4 bg-red-100 border border-red-300 text-red-700 rounded-lg flex items-start gap-3">
                     <WarningIcon className="w-5 h-5 flex-shrink-0 mt-0.5" />
                     <div className="flex-1">
-                        <p className="font-medium">Erreur PDF</p>
+                        <p className="font-medium">Erreur</p>
                         <p className="text-sm">{pdfError}</p>
                     </div>
                     <button
                         onClick={() => setPdfError(null)}
                         className="text-red-700 hover:text-red-900 font-bold text-lg leading-none"
+                    >
+                        ×
+                    </button>
+                </div>
+            )}
+            
+            {syncSuccess && (
+                <div className="mb-4 p-4 bg-green-100 border border-green-300 text-green-700 rounded-lg flex items-start gap-3">
+                    <div className="flex-1">
+                        <p className="font-medium">Succès</p>
+                        <p className="text-sm">{syncSuccess}</p>
+                    </div>
+                    <button
+                        onClick={() => setSyncSuccess(null)}
+                        className="text-green-700 hover:text-green-900 font-bold text-lg leading-none"
                     >
                         ×
                     </button>

@@ -58,6 +58,10 @@ export function GetInvoiceByID(arg1) {
   return window['go']['main']['App']['GetInvoiceByID'](arg1);
 }
 
+export function GetSettings() {
+  return window['go']['main']['App']['GetSettings']();
+}
+
 export function GetTotalInWords(arg1) {
   return window['go']['main']['App']['GetTotalInWords'](arg1);
 }
@@ -86,6 +90,10 @@ export function SearchClients(arg1) {
   return window['go']['main']['App']['SearchClients'](arg1);
 }
 
+export function SyncOldInvoices() {
+  return window['go']['main']['App']['SyncOldInvoices']();
+}
+
 export function UpdateClient(arg1) {
   return window['go']['main']['App']['UpdateClient'](arg1);
 }
@@ -96,4 +104,8 @@ export function UpdateInvoice(arg1, arg2) {
 
 export function UpdateProduct(arg1) {
   return window['go']['main']['App']['UpdateProduct'](arg1);
+}
+
+export function UpdateSettings(arg1) {
+  return window['go']['main']['App']['UpdateSettings'](arg1);
 }

@@ -4,6 +4,7 @@ import {client} from '../models';
 import {invoice} from '../models';
 import {inventory} from '../models';
 import {main} from '../models';
+import {settings} from '../models';
 
 export function BackupDatabase():Promise<string>;
 
@@ -33,6 +34,8 @@ export function GetDashboardStats(arg1:number):Promise<main.DashboardStats>;
 
 export function GetInvoiceByID(arg1:number):Promise<invoice.InvoiceResponse>;
 
+export function GetSettings():Promise<settings.Settings>;
+
 export function GetTotalInWords(arg1:number):Promise<string>;
 
 export function GetVersion():Promise<string>;
@@ -47,8 +50,12 @@ export function RestoreDatabase():Promise<string>;
 
 export function SearchClients(arg1:string):Promise<Array<client.Client>>;
 
+export function SyncOldInvoices():Promise<number>;
+
 export function UpdateClient(arg1:client.Client):Promise<void>;
 
 export function UpdateInvoice(arg1:number,arg2:invoice.InvoiceCreateRequest):Promise<invoice.InvoiceResponse>;
 
 export function UpdateProduct(arg1:inventory.Product):Promise<void>;
+
+export function UpdateSettings(arg1:settings.Settings):Promise<settings.Settings>;

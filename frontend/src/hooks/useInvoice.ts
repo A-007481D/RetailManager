@@ -69,7 +69,7 @@ const formatDate = (date: Date): string => {
     return `${day}-${month}-${year}`;
 };
 
-export function useInvoice() {
+export const useInvoice = (options?: { onSuccess?: () => void }) => {
     const [formData, setFormData] = useState<InvoiceFormData>({
         date: formatDate(new Date()),
         customFormattedId: '',
@@ -302,6 +302,11 @@ export function useInvoice() {
 
             // Open the PDF
             OpenPDF(pdfPath);
+
+            // Call onSuccess callback if provided
+            if (options?.onSuccess) {
+                options.onSuccess();
+            }
 
             // Reset form
             resetForm();

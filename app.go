@@ -17,6 +17,7 @@ import (
 	"factureapp/backend/database"
 	"factureapp/backend/inventory"
 	"factureapp/backend/invoice"
+	"factureapp/backend/settings"
 	"factureapp/backend/sheets"
 )
 
@@ -28,6 +29,7 @@ type App struct {
 	invoiceService   *invoice.Service
 	inventoryService *inventory.Service
 	clientService    *client.Service
+	settingsService  *settings.Service
 	sheetsService    *sheets.Service
 }
 
@@ -36,12 +38,14 @@ func NewApp() *App {
 	inventoryService := inventory.NewService()
 	invoiceService := invoice.NewService(inventoryService)
 	clientService := client.NewService()
+	settingsService := settings.NewService()
 	sheetsService := sheets.NewService()
 
 	return &App{
 		invoiceService:   invoiceService,
 		inventoryService: inventoryService,
 		clientService:    clientService,
+		settingsService:  settingsService,
 		sheetsService:    sheetsService,
 	}
 }
@@ -81,6 +85,18 @@ func (a *App) startup(ctx context.Context) {
 		os.Exit(1)
 	}
 
+	fmt.Println("Running Settings Migrations...")
+	if err := a.settingsService.Migrate(); err != nil {
+		errorMessage := fmt.Sprintf("Erreur lors de la mise à jour (Paramètres): %v", err)
+		fmt.Println(errorMessage)
+		runtime.MessageDialog(ctx, runtime.MessageDialogOptions{
+			Type:    runtime.ErrorDialog,
+			Title:   "Erreur de Migration",
+			Message: errorMessage,
+		})
+		os.Exit(1)
+	}
+
 	fmt.Println("Running Invoice Migrations...")
 	if err := a.invoiceService.Migrate(); err != nil {
 		errorMessage := fmt.Sprintf("Erreur lors de la mise à jour (Factures): %v", err)
@@ -105,6 +121,7 @@ func (a *App) startup(ctx context.Context) {
 		os.Exit(1)
 	}
 
+	fmt.Println("App Initialization Complete.")
 	fmt.Println("RetailManager started successfully")
 }
 
@@ -143,10 +160,31 @@ func (a *App) GeneratePDF(invoiceID uint) (string, error) {
 	// Auto-export to Google Sheets
 	inv, fetchErr := a.invoiceService.GetInvoiceByID(invoiceID)
 	if fetchErr == nil {
-		_ = a.sheetsService.AppendInvoice(inv)
+		err := a.sheetsService.AppendInvoice(inv)
+		if err == nil {
+			_ = a.invoiceService.MarkAsSynced(invoiceID)
+		}
 	}
 
 	return pdfPath, nil
+}
+
+// SyncOldInvoices syncs all unsynced invoices to Google Sheets
+func (a *App) SyncOldInvoices() (int, error) {
+	unsynced, err := a.invoiceService.GetUnsyncedInvoices()
+	if err != nil {
+		return 0, err
+	}
+
+	syncedCount := 0
+	for _, inv := range unsynced {
+		if err := a.sheetsService.AppendInvoice(&inv); err == nil {
+			_ = a.invoiceService.MarkAsSynced(inv.ID)
+			syncedCount++
+		}
+	}
+
+	return syncedCount, nil
 }
 
 // GetVersion returns the application version
@@ -247,6 +285,16 @@ func (a *App) CreateProduct(product inventory.Product) (*inventory.Product, erro
 // GetAllProducts returns all products
 func (a *App) GetAllProducts() ([]inventory.Product, error) {
 	return a.inventoryService.GetAllProducts()
+}
+
+// GetSettings returns the global application settings
+func (a *App) GetSettings() (*settings.Settings, error) {
+	return a.settingsService.GetSettings()
+}
+
+// UpdateSettings updates the global application settings
+func (a *App) UpdateSettings(req *settings.Settings) (*settings.Settings, error) {
+	return a.settingsService.UpdateSettings(req)
 }
 
 // UpdateProduct updates an existing product

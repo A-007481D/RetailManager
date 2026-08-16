@@ -307,6 +307,7 @@ export namespace invoice {
 	    chequeInfo?: ChequeInfo;
 	    effetInfo?: EffetInfo;
 	    items: InvoiceItem[];
+	    syncedToSheets: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new InvoiceResponse(source);
@@ -329,6 +330,7 @@ export namespace invoice {
 	        this.chequeInfo = this.convertValues(source["chequeInfo"], ChequeInfo);
 	        this.effetInfo = this.convertValues(source["effetInfo"], EffetInfo);
 	        this.items = this.convertValues(source["items"], InvoiceItem);
+	        this.syncedToSheets = source["syncedToSheets"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
@@ -439,6 +441,60 @@ export namespace main {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.InvoiceStats = this.convertValues(source["InvoiceStats"], invoice.InvoiceStats);
 	        this.InventoryStats = this.convertValues(source["InventoryStats"], inventory.InventoryStats);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+
+}
+
+export namespace settings {
+	
+	export class Settings {
+	    ID: number;
+	    // Go type: time
+	    CreatedAt: any;
+	    // Go type: time
+	    UpdatedAt: any;
+	    // Go type: gorm
+	    DeletedAt: any;
+	    companyName: string;
+	    companyIce: string;
+	    companyAddress: string;
+	    tvaRate: number;
+	    googleSheetsId: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new Settings(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.ID = source["ID"];
+	        this.CreatedAt = this.convertValues(source["CreatedAt"], null);
+	        this.UpdatedAt = this.convertValues(source["UpdatedAt"], null);
+	        this.DeletedAt = this.convertValues(source["DeletedAt"], null);
+	        this.companyName = source["companyName"];
+	        this.companyIce = source["companyIce"];
+	        this.companyAddress = source["companyAddress"];
+	        this.tvaRate = source["tvaRate"];
+	        this.googleSheetsId = source["googleSheetsId"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {

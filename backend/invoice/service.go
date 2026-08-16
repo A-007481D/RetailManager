@@ -413,6 +413,7 @@ func (s *Service) toResponse(inv *Invoice) *InvoiceResponse {
 		TotalInWords:      inv.TotalInWords,
 		PaymentMethod:     inv.PaymentMethod,
 		Items:             inv.Items,
+		SyncedToSheets:    inv.SyncedToSheets,
 	}
 
 	if inv.PaymentMethod == "CHEQUE" && inv.ChequeNumber != "" {
@@ -592,4 +593,25 @@ func (s *Service) GetStats(year int) (*InvoiceStats, error) {
 	}
 
 	return &stats, nil
+}
+
+// MarkAsSynced marks an invoice as synced to Google Sheets
+func (s *Service) MarkAsSynced(id uint) error {
+	db := database.GetDB()
+	return db.Model(&Invoice{}).Where("id = ?", id).Update("synced_to_sheets", true).Error
+}
+
+// GetUnsyncedInvoices returns all invoices that have not been synced yet
+func (s *Service) GetUnsyncedInvoices() ([]InvoiceResponse, error) {
+	db := database.GetDB()
+	var invoices []Invoice
+	if err := db.Preload("Items").Preload("Items.Product").Where("synced_to_sheets = ?", false).Find(&invoices).Error; err != nil {
+		return nil, fmt.Errorf("impossible de récupérer les factures non synchronisées: %w", err)
+	}
+
+	var responses []InvoiceResponse
+	for _, inv := range invoices {
+		responses = append(responses, *s.toResponse(&inv))
+	}
+	return responses, nil
 }

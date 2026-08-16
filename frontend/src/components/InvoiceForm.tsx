@@ -23,7 +23,7 @@ interface InvoiceFormProps {
 }
 
 export const InvoiceForm: React.FC<InvoiceFormProps> = ({ invoiceToEdit, onEditComplete }) => {
-    const { products } = useInventory();
+    const { products, fetchProducts } = useInventory();
     const { clients } = useClients();
     const {
         formData,
@@ -41,7 +41,7 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({ invoiceToEdit, onEditC
         editingId,
         loadInvoice,
         resetForm,
-    } = useInvoice();
+    } = useInvoice({ onSuccess: fetchProducts });
 
     // Load invoice when invoiceToEdit changes
     useEffect(() => {

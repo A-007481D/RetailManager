@@ -2,27 +2,21 @@ package sheets
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log"
 	"os"
 	"path/filepath"
 
 	"factureapp/backend/invoice"
+	appsettings "factureapp/backend/settings"
 
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/option"
 	"google.golang.org/api/sheets/v4"
 )
 
-type Settings struct {
-	GoogleSpreadsheetID string `json:"google_spreadsheet_id"`
-}
-
 type Service struct {
 	configDir     string
-	isEnabled     bool
-	sheetID       string
 	srv           *sheets.Service
 	headersPushed bool
 }
@@ -46,30 +40,6 @@ func NewService() *Service {
 		return s
 	}
 
-	// Read settings.json
-	settingsPath := filepath.Join(appConfigDir, "settings.json")
-	var settings Settings
-	settingsData, err := os.ReadFile(settingsPath)
-	if err != nil {
-		// Create default settings file
-		defaultSettings := Settings{GoogleSpreadsheetID: ""}
-		data, _ := json.MarshalIndent(defaultSettings, "", "  ")
-		_ = os.WriteFile(settingsPath, data, 0644)
-		log.Printf("Google Sheets sync disabled: Please fill google_spreadsheet_id in %s", settingsPath)
-		return s
-	}
-
-	if err := json.Unmarshal(settingsData, &settings); err != nil {
-		log.Printf("Google Sheets sync disabled: invalid settings.json %v", err)
-		return s
-	}
-
-	if settings.GoogleSpreadsheetID == "" {
-		log.Printf("Google Sheets sync disabled: google_spreadsheet_id is empty")
-		return s
-	}
-	s.sheetID = settings.GoogleSpreadsheetID
-
 	ctx := context.Background()
 	b, err := os.ReadFile(credsPath)
 	if err != nil {
@@ -91,19 +61,30 @@ func NewService() *Service {
 	}
 
 	s.srv = srv
-	s.isEnabled = true
-	log.Printf("Google Sheets sync initialized successfully for spreadsheet: %s", s.sheetID)
+	log.Printf("Google Sheets API initialized successfully")
 	return s
 }
 
 func (s *Service) AppendInvoice(inv *invoice.InvoiceResponse) error {
-	if !s.isEnabled {
-		return nil // silently ignore if not configured
+	if s.srv == nil {
+		return fmt.Errorf("Sheets API is not configured (missing credentials.json)")
+	}
+
+	// Fetch dynamic settings to get Spreadsheet ID
+	settingsSvc := appsettings.NewService()
+	appSettings, err := settingsSvc.GetSettings()
+	if err != nil {
+		return fmt.Errorf("failed to get settings: %w", err)
+	}
+
+	spreadsheetId := appSettings.GoogleSheetsID
+	if spreadsheetId == "" {
+		return fmt.Errorf("Google Sheets ID is not configured in Settings")
 	}
 
 	// Check and push headers if sheet is empty
 	if !s.headersPushed {
-		s.ensureHeaders()
+		s.ensureHeaders(spreadsheetId)
 	}
 
 	// Prepare data
@@ -123,10 +104,9 @@ func (s *Service) AppendInvoice(inv *invoice.InvoiceResponse) error {
 		},
 	}
 
-	spreadsheetId := s.sheetID
 	writeRange := "A:H" // General range, API will find the next empty row
 
-	_, err := s.srv.Spreadsheets.Values.Append(spreadsheetId, writeRange, vr).
+	_, err = s.srv.Spreadsheets.Values.Append(spreadsheetId, writeRange, vr).
 		ValueInputOption("USER_ENTERED").
 		InsertDataOption("INSERT_ROWS").
 		Do()
@@ -139,9 +119,9 @@ func (s *Service) AppendInvoice(inv *invoice.InvoiceResponse) error {
 	return nil
 }
 
-func (s *Service) ensureHeaders() {
+func (s *Service) ensureHeaders(spreadsheetId string) {
 	readRange := "A1:H1"
-	resp, err := s.srv.Spreadsheets.Values.Get(s.sheetID, readRange).Do()
+	resp, err := s.srv.Spreadsheets.Values.Get(spreadsheetId, readRange).Do()
 	if err != nil {
 		log.Printf("Failed to read headers: %v", err)
 		return
@@ -154,7 +134,7 @@ func (s *Service) ensureHeaders() {
 				{"ID Facture", "Date", "Client", "ICE", "Total HT", "TVA", "Total TTC", "Paiement"},
 			},
 		}
-		_, err = s.srv.Spreadsheets.Values.Update(s.sheetID, readRange, headerVr).
+		_, err = s.srv.Spreadsheets.Values.Update(spreadsheetId, readRange, headerVr).
 			ValueInputOption("USER_ENTERED").
 			Do()
 		if err != nil {

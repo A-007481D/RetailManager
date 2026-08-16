@@ -73,6 +73,9 @@ type Invoice struct {
 
 	// Related items
 	Items []InvoiceItem `gorm:"foreignKey:InvoiceID" json:"items"`
+
+	// Sync status
+	SyncedToSheets bool `json:"syncedToSheets"`
 }
 
 // InvoiceCreateRequest is the DTO for creating invoices from frontend
@@ -117,4 +120,5 @@ type InvoiceResponse struct {
 	ChequeInfo        *ChequeInfo   `json:"chequeInfo,omitempty"`
 	EffetInfo         *EffetInfo    `json:"effetInfo,omitempty"`
 	Items             []InvoiceItem `json:"items"`
+	SyncedToSheets    bool          `json:"syncedToSheets"`
 }

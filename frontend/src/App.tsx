@@ -5,9 +5,10 @@ import { ProductList } from './components/ProductList';
 import { Dashboard } from './components/Dashboard';
 import { ClientList } from './components/ClientList';
 import { InvoiceList } from './components/InvoiceList';
+import { SettingsTab } from './components/Settings';
 
 function App() {
-    const [activeTab, setActiveTab] = useState<'dashboard' | 'invoices' | 'inventory' | 'clients'>('dashboard');
+    const [activeTab, setActiveTab] = useState<'dashboard' | 'invoices' | 'inventory' | 'clients' | 'settings'>('dashboard');
     const [invoiceToEdit, setInvoiceToEdit] = useState<any>(null);
     const [showInvoiceForm, setShowInvoiceForm] = useState(false);
 
@@ -78,6 +79,19 @@ function App() {
                     >
                         Clients
                     </button>
+                    <button
+                        onClick={() => {
+                            setActiveTab('settings');
+                            setInvoiceToEdit(null);
+                            setShowInvoiceForm(false);
+                        }}
+                        className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${activeTab === 'settings'
+                            ? 'bg-white text-primary-600 shadow-sm'
+                            : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'
+                            }`}
+                    >
+                        Paramètres
+                    </button>
                 </div>
             </nav>
 
@@ -117,6 +131,7 @@ function App() {
                 )}
                 {activeTab === 'inventory' && <ProductList />}
                 {activeTab === 'clients' && <ClientList />}
+                {activeTab === 'settings' && <SettingsTab />}
             </main>
         </div>
     );
